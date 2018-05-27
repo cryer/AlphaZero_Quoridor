@@ -95,6 +95,10 @@ python train.py
 - [ ] 算法调参 :worried:
 - [ ] 训练 :worried:
 
+## 训练进度
+
+待续
+
 # MIT License
 
 ```
