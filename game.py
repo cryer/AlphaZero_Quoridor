@@ -1,7 +1,5 @@
 import pygame
-# import logwood
-# from logwood.handlers.stderr import ColoredStderrHandler
-from environment.quoridor import Quoridor
+from quoridor import Quoridor
 from agents.base import BaseAgent
 from agents.manual import ManualPygameAgent
 from mcts import MCTSPlayer
@@ -9,13 +7,6 @@ from policy_value_net import PolicyValueNet
 # add
 import numpy as np
 import time
-
-# logwood.basic_config(
-#     level=logwood.INFO,
-#     handlers=[ColoredStderrHandler()]
-# )
-#
-# logger = logwood.get_logger('Visuals')
 
 # Define Colors
 BLACK = (0, 0, 0)
@@ -42,7 +33,6 @@ def render(game,screen):
     draw_game(game, screen, valid_actions)
 
 def main():
-    # logger.info("Loading Game Environment")
     game = Quoridor()
     player1 = ManualPygameAgent('Matt')
     # player2 = ManualPygameAgent('Kelsy')
@@ -54,7 +44,6 @@ def main():
 
     game.load(player1, player2)
 
-    # logger.info("Initializing Visuals")
     pygame.init()
 
     WINDOW_SIZE = [SCREEN_WIDTH, SCREEN_HEIGHT]
