@@ -87,6 +87,14 @@ python game.py
 python train.py
 ```
 
+# 进度
+
+- [x] 初步代码 :blush:
+- [ ] 代码和结构优化 :worried:
+- [ ] 多线程多进程 :worried:
+- [ ] 算法调参 :worried:
+- [ ] 训练 :worried:
+
 # MIT License
 
 ```
