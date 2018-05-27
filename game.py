@@ -38,9 +38,9 @@ def main():
     # player2 = ManualPygameAgent('Kelsy')
     player2 = MCTSPlayer(PolicyValueNet().policy_value_fn,c_puct=5,n_playout=100,is_selfplay=0)
 
-    # player_types = {1: 'human', 2: 'computer'}
-    player_types = {1: 'computer', 2: 'computer'}
-    players = {1: player2, 2: player2}
+    player_types = {1: 'human', 2: 'computer'}
+    #player_types = {1: 'computer', 2: 'computer'}
+    players = {1: player1, 2: player2}
 
     game.load(player1, player2)
 
