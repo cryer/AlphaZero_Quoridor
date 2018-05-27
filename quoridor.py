@@ -1,5 +1,4 @@
 import numpy as np
-# import logwood
 from queue import Queue
 import time
 
@@ -8,7 +7,6 @@ class Quoridor(object):
     VERTICAL = -1
 
     def __init__(self, safe=False):
-        # self._logger = logwood.get_logger("{name}".format(name=self.__class__.__name__))
         self.safe = safe
 
         self.action_space = 140  # 140 possible actions in total
@@ -57,7 +55,6 @@ class Quoridor(object):
         self._player1_walls_remaining = 10
         self._player2_walls_remaining = 10
 
-    # @property
     def state(self):
         """Returns a set of 9x9 planes that represent the game state.
         1. The current player position
@@ -138,7 +135,6 @@ class Quoridor(object):
         current_player = state[-1] == np.zeros([9, 9])
         # TODO: Implement the rest of this
 
-    # @property
     def actions(self):
         player = self.current_player
         location = self._positions[player]
@@ -416,7 +412,6 @@ class Quoridor(object):
             sw_intersection = intersections[(current_tile - 9) - (location_row - 1) - 1]
             se_intersection = intersections[(current_tile - 9) - (location_row - 1)]
 
-        # self._logger.debug(ne_intersection)
         return {'NW': nw_intersection,
                 'NE': ne_intersection,
                 'SE': se_intersection,
