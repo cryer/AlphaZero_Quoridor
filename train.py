@@ -3,10 +3,9 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from environment.quoridor import Quoridor
+from quoridor import Quoridor
 from policy_value_net import PolicyValueNet
 
-# from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts import MCTSPlayer
 
 
@@ -92,22 +91,6 @@ class TrainPipeline(object):
                 kl, self.lr_multiplier, loss, entropy, explained_var_old, explained_var_new))
         return loss, entropy
 
-    # def policy_evaluate(self, n_games=10):
-    #     """
-    #     与MCTS之间进行对弈来评估策略价值网络
-    #
-    #     """
-    #     current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn, c_puct=self.c_puct,
-    #                                      n_playout=self.n_playout)
-    #     pure_mcts_player = MCTS_Pure(c_puct=5, n_playout=self.pure_mcts_playout_num)
-    #     win_cnt = defaultdict(int)
-    #     for i in range(n_games):
-    #         winner = self.game.start_play(current_mcts_player, pure_mcts_player, start_player=i % 2, is_shown=0)
-    #         win_cnt[winner] += 1
-    #     win_ratio = 1.0 * (win_cnt[1] + 0.5 * win_cnt[-1]) / n_games
-    #     print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(self.pure_mcts_playout_num, win_cnt[1], win_cnt[2],
-    #                                                               win_cnt[-1]))
-    #     return win_ratio
     def run(self):
         """训练"""
         try:
