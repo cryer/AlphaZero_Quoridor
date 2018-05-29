@@ -72,7 +72,7 @@ python train.py --player_type 2 --computer_type 1
 首先需要满足以下环境：
 ```
 python 3.X
-pytorch 0.1-0.3
+pytorch 0.3
 pygame
 numpy
 ```
