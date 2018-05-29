@@ -76,16 +76,32 @@ pytorch 0.1-0.3
 pygame
 numpy
 ```
-然后运行以下代码打开游戏界面进行简单的人机对战：
+首先克隆我的代码：
 ```
 git clone https://github.com/cryer/AlphaZero_Quoridor.git
 cd AlphaZero_Quoridor/
-python game.py
 ```
-想要训练网络，在运行：
+
+对战模式有人人对战和人机对战，命令player_type指定对手类型，1是人人对战，2是人机对战，
+人机对战时还可以指定对面电脑的类型，利用命令computer_type，为1时电脑类型为Alpha MCTS，也就是策略价值网络结合
+蒙特卡洛树搜索的AlphaZero算法版本；为2时电脑为传统的MCTS，没有利用神经网络。
+
+* 人人对战，运行：
 ```
-python train.py
+python train.py --player_type 1
 ```
+
+* 人机对战（对手为Alpha MCTS）
+```
+python train.py --player_type 2 --computer_type 1
+```
+
+* 人机对战（对手为传统 MCTS）
+```
+python train.py --player_type 2 --computer_type 2
+```
+后续还会加入极大极小搜索配合α-β剪枝的电脑算法，这主要是为了进行棋力的评测，因为极大极小搜索配合α-β剪枝在这个游戏上
+已经可以取得非常好的效果。
 
 # 进度
 
