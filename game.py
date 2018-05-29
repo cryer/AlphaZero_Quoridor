@@ -1,12 +1,14 @@
 import pygame
-from quoridor import Quoridor
+from environment.quoridor import Quoridor
 from agents.base import BaseAgent
 from agents.manual import ManualPygameAgent
-from mcts import MCTSPlayer
+from mcts import MCTSPlayer as A_Player
+from pure_mcts import MCTSPlayer as B_Player
 from policy_value_net import PolicyValueNet
 # add
 import numpy as np
 import time
+import argparse
 
 # Define Colors
 BLACK = (0, 0, 0)
@@ -28,21 +30,49 @@ TILE_HEIGHT = SCREEN_HEIGHT / 10.6
 WALL_WIDTH = 0.2 * TILE_WIDTH
 WALL_HEIGHT = TILE_WIDTH * 2 + WALL_WIDTH
 
-def render(game,screen):
+
+def render(game, screen):
     valid_actions = game.actions()
     draw_game(game, screen, valid_actions)
 
+
+def text(screen, text, position1=2, position2=0.6, color=BLUE):
+    font = pygame.font.SysFont("arial", 18)
+    a = font.render(
+        "%s" % text, 1, color)
+    p = SCREEN_HEIGHT + position1, SCREEN_HEIGHT * position2
+    screen.blit(a, p)
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--player_type", type=int, default=1,
+                        help="palyer type you want to fight,1 is human,2 is computer")
+    parser.add_argument("--computer_type", type=int, default=0, help="computer type,1 is Alpha MCTS,2 is pure MCTS")
+    args = parser.parse_args()
+
     game = Quoridor()
-    player1 = ManualPygameAgent('Matt')
-    # player2 = ManualPygameAgent('Kelsy')
-    player2 = MCTSPlayer(PolicyValueNet().policy_value_fn,c_puct=5,n_playout=100,is_selfplay=0)
+    human1 = ManualPygameAgent('Kurumi')
+    human2 = ManualPygameAgent('Cryer')
+    MCTS_Alpha = A_Player(PolicyValueNet().policy_value_fn, c_puct=5, n_playout=30, is_selfplay=0)
+    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 50层400秒
 
-    player_types = {1: 'human', 2: 'computer'}
-    #player_types = {1: 'computer', 2: 'computer'}
-    players = {1: player1, 2: player2}
+    if args.player_type == 1:
+        player_types = {1: 'human', 2: 'human'}
+        players = {1: human1, 2: human2}
+        if args.computer_type == 0:
+            pass
+    elif args.player_type == 2:
+        player_types = {1: 'human', 2: 'computer'}
+        if args.computer_type == 1:
+            players = {1: human1, 2: MCTS_Alpha}
+        elif args.computer_type == 2:
+            players = {1: human1, 2: MCTS_Pure}
+        elif args.computer_type == 0:
+            print("Set computer type to 1 or 2 for choosing computer!")
+            # pygame.quit()
 
-    game.load(player1, player2)
+    # game.load(player1, player2)
 
     pygame.init()
 
@@ -56,11 +86,17 @@ def main():
     # valid_actions = game.valid_actions  11
     valid_actions = game.actions()
     done = False
+    winner = None
     t1 = time.time()
     while not done:
         player_moved = False
 
+        # 定义落子历史
+        # move_history = []
+
         pawn_moves, walls = draw_game(game, screen, valid_actions)
+
+        # text(screen, "player1 move:", position1=2, position2=0.8, color=BLUE)
 
         valid_walls = [wall for wall in walls if wall[2] in valid_actions]
         if player_types[game.current_player] == 'human':
@@ -86,7 +122,8 @@ def main():
                     # 添加
                     if player_moved:
                         real_action = players[game.current_player].choose_action()
-                        done = game.step(real_action)
+                        # move_history.append(real_action)
+                        done, winner = game.step(real_action)
                         render(game, screen)  # 渲染游戏
                         break
 
@@ -99,7 +136,8 @@ def main():
                         # 修改
                         if player_moved == True:
                             real_action = players[game.current_player].choose_action()
-                            done = game.step(real_action)
+                            # move_history.append(real_action)
+                            done, winner = game.step(real_action)
                             render(game, screen)  # 渲染游戏
                             break
 
@@ -108,23 +146,27 @@ def main():
 
         valid_actions = game.actions()
 
-
         # 待改
         if player_types[game.current_player] == 'computer':
             print("computer %s thinking..." % str(game.current_player))
             tic = time.time()
             # real_action = np.random.choice(valid_actions)
             real_action = players[game.current_player].choose_action(game)
+            # move_history.append(real_action)
             toc = time.time()
-            print("MCTS choose action:",real_action,"  ,spend %s seconds" % str(toc-tic))
-            done = game.step(real_action)
+            print("MCTS choose action:", real_action, "  ,spend %s seconds" % str(toc - tic))
+            done, winner = game.step(real_action)
             # render(game, screen)
             # valid_actions = game.valid_actions
+        # if game.current_player == 1:
+        #     text(screen, text, position1=2, position2=0.8, color=BLUE)
+
         if done:
+            print("game over! winner is %s player:%s" % (player_types[winner], winner))
             break
 
     t2 = time.time()
-    print("total time :", t2-t1)
+    print("total time :", t2 - t1)
     pygame.quit()
 
 
@@ -275,6 +317,8 @@ def draw_game(game, screen, valid_actions):
     player2_walls = font.render("Walls Remaining: {player2}".format(player2=game._player2_walls_remaining), 1, RED)
     player2_text_position = SCREEN_HEIGHT + 2, SCREEN_HEIGHT * 0.1
 
+    move_history = []
+
     screen.blit(player1_walls, player1_text_position)
     screen.blit(player2_walls, player2_text_position)
     return pawn_moves, walls
@@ -296,3 +340,4 @@ def draw_load_screen(screen):
 
 if __name__ == '__main__':
     main()
+
