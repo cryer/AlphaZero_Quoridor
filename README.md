@@ -53,7 +53,7 @@ BUG，我改进了一下，目前可以正常显示。
 
 运行：
 ```
-python train.py --player_type 2 --computer_type 1
+python game.py --player_type 2 --computer_type 1
 ```
 就可以打开这个游戏界面，并且实现简单的人机对战，玩家先手，电脑目前是未训练的策略价值网络进行的蒙特卡洛搜索树MCTS，默认100次模拟
 落子一次，这是考虑到测试时间的原因，即使只有100次，每次落子也要花费近50秒的时间，看来网络还是有些大了。最后希望800次模拟可以在90秒以内。
@@ -68,6 +68,8 @@ python train.py --player_type 2 --computer_type 1
 * 另外，代码很多部分我都给出了详细的中文注释，我相信可以让你更快的了解代码，让你轻松的看代码。
 
 # Get Started
+
+## 测试
 
 首先需要满足以下环境：
 ```
@@ -88,18 +90,50 @@ cd AlphaZero_Quoridor/
 
 * 人人对战，运行：
 ```
-python train.py --player_type 1
+python game.py --player_type 1
 ```
 
 * 人机对战（对手为Alpha MCTS）
 ```
-python train.py --player_type 2 --computer_type 1
+python game.py --player_type 2 --computer_type 1
 ```
 
 * 人机对战（对手为传统 MCTS）
 ```
-python train.py --player_type 2 --computer_type 2
+python game.py --player_type 2 --computer_type 2
 ```
+
+## 训练
+
+想训练，运行：
+
+```
+python train.py
+```
+
+* 注意需要根据自己的要求和电脑配置选择合适的训练参数，详细参数如下：
+
+```
+        # 训练参数
+        self.learn_rate = 2e-3
+        self.lr_multiplier = 1.0  # 适应性调节学习速率
+        self.temp = 1.0
+        self.n_playout = 10  # 测试
+        self.c_puct = 5
+        self.buffer_size = 10000
+        self.batch_size = 10   # 取10 测试
+        self.data_buffer = deque(maxlen=self.buffer_size)
+        self.play_batch_size = 1
+        self.epochs = 5
+        self.kl_targ = 0.02
+        self.check_freq = 50
+        self.game_batch_num = 1500
+        self.best_win_ratio = 0.0
+        self.pure_mcts_playout_num = 1000
+```
+自己根据实际修改，另外由于暂时代码结构和代码书写未优化，多进程和多线程也还没有实现，所以代码的训练较慢，可以尝试，
+但是最好在我加入多线程多进程之后在开始训练。
+
 后续还会加入极大极小搜索配合α-β剪枝的电脑算法，这主要是为了进行棋力的评测，因为极大极小搜索配合α-β剪枝在这个游戏上
 已经可以取得非常好的效果。
 
