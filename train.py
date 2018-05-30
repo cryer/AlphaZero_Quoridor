@@ -20,7 +20,7 @@ class TrainPipeline(object):
         self.n_playout = 400
         self.c_puct = 5
         self.buffer_size = 10000
-        self.batch_size = 10  # 取1 测试ing
+        self.batch_size = 128  # 取1 测试ing
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 1
         self.epochs = 5
@@ -100,6 +100,9 @@ class TrainPipeline(object):
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
                     print("LOSS:",loss)
+                    # 保存loss
+                    with open('loss.txt', 'a') as f:
+                        f.writelines(str(loss) + '\n')
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
