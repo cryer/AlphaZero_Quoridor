@@ -1,5 +1,5 @@
 import pygame
-from environment.quoridor import Quoridor
+from quoridor import Quoridor
 from agents.base import BaseAgent
 from agents.manual import ManualPygameAgent
 from mcts import MCTSPlayer as A_Player
