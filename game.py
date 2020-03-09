@@ -24,8 +24,8 @@ DARKBLUE = (0, 0, 128)
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = SCREEN_WIDTH - 200
 
-TILE_WIDTH = SCREEN_HEIGHT / 10.6
-TILE_HEIGHT = SCREEN_HEIGHT / 10.6
+TILE_WIDTH = SCREEN_HEIGHT / 5.8
+TILE_HEIGHT = SCREEN_HEIGHT / 5.8
 
 WALL_WIDTH = 0.2 * TILE_WIDTH
 WALL_HEIGHT = TILE_WIDTH * 2 + WALL_WIDTH
@@ -181,35 +181,35 @@ def draw_game(game, screen, valid_actions):
     # 遍历所有合法的棋子移动，action是一个int
     for action in pawn_actions:
         if action == game._DIRECTIONS['N']:
-            action_tiles[reference_tile + 9] = action
+            action_tiles[reference_tile + 5] = action
         elif action == game._DIRECTIONS['S']:
-            action_tiles[reference_tile - 9] = action
+            action_tiles[reference_tile - 5] = action
         elif action == game._DIRECTIONS['E']:
             action_tiles[reference_tile + 1] = action
         elif action == game._DIRECTIONS['W']:
             action_tiles[reference_tile - 1] = action
         elif action == game._DIRECTIONS['NN']:
-            action_tiles[reference_tile + 18] = action
+            action_tiles[reference_tile + 10] = action
         elif action == game._DIRECTIONS['SS']:
-            action_tiles[reference_tile - 18] = action
+            action_tiles[reference_tile - 10] = action
         elif action == game._DIRECTIONS['EE']:
             action_tiles[reference_tile + 2] = action
         elif action == game._DIRECTIONS['WW']:
             action_tiles[reference_tile - 2] = action
         elif action == game._DIRECTIONS['NE']:
-            action_tiles[reference_tile + 10] = action
+            action_tiles[reference_tile + 6] = action
         elif action == game._DIRECTIONS['NW']:
-            action_tiles[reference_tile + 8] = action
+            action_tiles[reference_tile + 4] = action
         elif action == game._DIRECTIONS['SE']:
-            action_tiles[reference_tile - 8] = action
+            action_tiles[reference_tile - 4] = action
         elif action == game._DIRECTIONS['SW']:
-            action_tiles[reference_tile - 10] = action
+            action_tiles[reference_tile - 6] = action
     # action_tiles key是位置，value是上一步动作action的值0-11
     # Draw Tiles
     pawn_moves = []
-    for row in range(9):
-        for column in range(9):
-            if row * 9 + column in action_tiles.keys():
+    for row in range(5):
+        for column in range(5):
+            if row * 5 + column in action_tiles.keys():
                 if game.current_player == 1:
                     color = LIGHTBLUE
                 else:
@@ -218,22 +218,22 @@ def draw_game(game, screen, valid_actions):
                     screen,
                     color,
                     [(TILE_WIDTH + WALL_WIDTH) * column,
-                     (WALL_WIDTH + TILE_HEIGHT) * (8 - row),
+                     (WALL_WIDTH + TILE_HEIGHT) * (4 - row),
                      TILE_WIDTH,
                      TILE_HEIGHT]
                 )
-                pawn_moves.append([rect, action_tiles[row * 9 + column]])
+                pawn_moves.append([rect, action_tiles[row * 5 + column]])
             else:
-                if row * 9 + column == game._positions[1]:
+                if row * 5 + column == game._positions[1]:
                     color = BLUE
-                elif row * 9 + column == game._positions[2]:
+                elif row * 5 + column == game._positions[2]:
                     color = RED
                 else:
                     color = DARKBLUE
                 pygame.draw.rect(screen,
                                  color,
                                  [(TILE_WIDTH + WALL_WIDTH) * column,
-                                  (WALL_WIDTH + TILE_HEIGHT) * (8 - row),
+                                  (WALL_WIDTH + TILE_HEIGHT) * (4 - row),
                                   TILE_WIDTH,
                                   TILE_HEIGHT])
 
@@ -241,49 +241,49 @@ def draw_game(game, screen, valid_actions):
 
     # Draw Vertical Walls
     placed_walls = []
-    for row in range(8):
-        for column in range(8):
+    for row in range(4):
+        for column in range(4):
             collide_points = []
             rect = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                               (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               (TILE_HEIGHT + WALL_WIDTH) * (3 - row),
                                WALL_WIDTH,
                                WALL_HEIGHT)
-            if game._intersections[row * 8 + column] == -1:
+            if game._intersections[row * 4 + column] == -1:
                 placed_walls.append(rect)
             else:
                 # Collide rectangles for highlighting the walls on hover
                 collide_top = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                                          (TILE_HEIGHT + WALL_WIDTH) * (7 - row) + TILE_HEIGHT / 2,
+                                          (TILE_HEIGHT + WALL_WIDTH) * (3 - row) + TILE_HEIGHT / 2,
                                           WALL_WIDTH,
                                           TILE_HEIGHT / 2)
                 pygame.draw.rect(screen, BLACK, collide_top)
                 collide_points.append(collide_top)
 
                 collide_bottom = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                                             (TILE_HEIGHT + WALL_WIDTH) * (7 - row) + TILE_HEIGHT + WALL_WIDTH,
+                                             (TILE_HEIGHT + WALL_WIDTH) * (3 - row) + TILE_HEIGHT + WALL_WIDTH,
                                              WALL_WIDTH,
                                              TILE_HEIGHT / 2)
                 pygame.draw.rect(screen, BLACK, collide_bottom)
                 collide_points.append(collide_bottom)
 
             pygame.draw.rect(screen, BLACK, rect)
-            walls.append([rect, collide_points, row * 8 + column + 64 + 12])
+            walls.append([rect, collide_points, row * 4 + column + 16 + 12])
 
     # Draw Horizontal Walls
-    for row in range(8):
-        for column in range(8):
+    for row in range(4):
+        for column in range(4):
             rect = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column,
-                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (3 - row),
                                WALL_HEIGHT,
                                WALL_WIDTH)
-            if game._intersections[row * 8 + column] == 1:
+            if game._intersections[row * 4 + column] == 1:
                 placed_walls.append(rect)
             else:
                 # Collide rectangles for highlighting the walls on hover
                 collide_points = []
 
                 collide_left = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column + TILE_WIDTH / 2,
-                                           TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                                           TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (3 - row),
                                            TILE_WIDTH / 2,
                                            WALL_WIDTH)
 
@@ -291,19 +291,19 @@ def draw_game(game, screen, valid_actions):
                 collide_points.append(collide_left)
 
                 collide_right = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column + TILE_WIDTH + WALL_WIDTH,
-                                            TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                                            TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (3 - row),
                                             TILE_WIDTH / 2,
                                             WALL_WIDTH)
                 pygame.draw.rect(screen, BLACK, collide_right)
                 collide_points.append(collide_right)
 
             rect = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * (column),
-                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (3 - row),
                                WALL_HEIGHT,
                                WALL_WIDTH)
 
             pygame.draw.rect(screen, BLACK, rect)
-            walls.append([rect, collide_points, row * 8 + column + 12])
+            walls.append([rect, collide_points, row * 4 + column + 12])
 
     for wall in placed_walls:
         pygame.draw.rect(screen, BROWN, wall)

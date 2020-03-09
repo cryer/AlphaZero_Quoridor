@@ -61,16 +61,16 @@ class policy_value_net(nn.Module):
         self.res4 = block(planes, planes)
         self.res5 = block(planes, planes)
         # 价值头
-        self.conv2 = nn.Conv2d(64, 4, kernel_size=3, stride=stride,
+        self.conv2 = nn.Conv2d(16, 4, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(4)
-        self.fc1 = nn.Linear(324, 128)
-        self.fc2 = nn.Linear(128, 1)
+        self.fc1 = nn.Linear(100, 32)
+        self.fc2 = nn.Linear(32, 1)
         # 策略头
-        self.conv3 = nn.Conv2d(64, 2, kernel_size=3, stride=stride,
+        self.conv3 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc3 = nn.Linear(162, 140)
+        self.fc3 = nn.Linear(50, 44)
 
     def forward(self,x):
         out = self.conv1(x)
@@ -85,14 +85,14 @@ class policy_value_net(nn.Module):
         value_out = self.conv2(out)
         value_out = self.bn2(value_out)
         value_out = self.relu(value_out)
-        value_out = value_out.view(-1, 324)
+        value_out = value_out.view(-1, 100)
         value_out = self.fc1(value_out)
         value_out = F.tanh(self.fc2(value_out))
         # 策略头
         policy_out = self.conv3(out)
         policy_out = self.bn3(policy_out)
         policy_out = self.relu(policy_out)
-        policy_out = policy_out.view(-1, 162)
+        policy_out = policy_out.view(-1, 50)
         # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4 支持dim
         policy_out = F.log_softmax(self.fc3(policy_out))
 
@@ -114,10 +114,10 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # 正则化系数
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock,26,64).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock,14,16).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock,26,64)
+            self.policy_value_net = policy_value_net(BasicBlock,14,16)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 
@@ -148,7 +148,7 @@ class PolicyValueNet(object):
         输出：一个列表，由每一个可用落子的(action, probability)和棋盘状态价值组成
         """
         legal_positions = game.actions()  # 策略价值网络输出的是所有的落子概率，所以你需要剔除已落子的位置
-        current_state = np.ascontiguousarray(game.state()).reshape([1,26,9,9])
+        current_state = np.ascontiguousarray(game.state()).reshape([1,14,5,5])
         if self.use_gpu:
             # device = torch.device("cuda:0")
             log_act_probs, value = self.policy_value_net(Variable(torch.from_numpy(current_state)).cuda().float())

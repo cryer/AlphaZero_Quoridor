@@ -171,7 +171,7 @@ class MCTSPlayer(object):
     # 获取落子
     def choose_action(self, game, temp=1e-3, return_prob=0):
         sensible_moves = game.actions()  # 获取所有可行的落子
-        move_probs = np.zeros(140)  # 获取落子的概率，由神经网络输出
+        move_probs = np.zeros(44)  # 获取落子的概率，由神经网络输出
         if len(sensible_moves) > 0:  # 棋盘未耗尽时
             acts, probs = self.mcts.get_move_probs(game, temp)  # 获取落子以及对应的落子概率
             move_probs[list(acts)] = probs  # 将概率转到move_probs列表中
