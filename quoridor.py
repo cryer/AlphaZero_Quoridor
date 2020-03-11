@@ -14,15 +14,16 @@ class Quoridor(object):
         self.players = [1, 2]  # 两个玩家
         self.reset()
 
-    # 待改
+    # load player's info (human or computer)
     def load(self, p1, p2):
         self.player1 = p1
         self.player2 = p2
 
-    # 获取当前玩家
+    # return current player info
     def get_current_player(self):
         return self.current_player
 
+    # reset and initialize single game
     def reset(self):
         self.current_player = 1
         self.last_player = -1
@@ -57,13 +58,14 @@ class Quoridor(object):
 
     def state(self):
         """Returns a set of 5x5 planes that represent the game state.
-        1. The current player position
-        2. The opponent position
-        3. Vertical Walls
-        4. Horizontal Walls
-        5 - 14. Number of walls remaining for current player
-        15 - 24. Number of walls remaining for opponent
-        25. Whose turn it is (0 for player 1, 1 for player 2)
+        0. No walls
+        1. Vertical walls
+        2. Horizontal walls
+        3. The current player position
+        4. The opponent position
+        5 - 8. Number of walls remaining for current player (if 3walls remain, 5/6/8th are zeros and 7th is ones)
+        9 - 12. Number of walls remaining for opponent
+        13. Whose turn it is (0 for player 1, 1 for player 2)
         """
         player1_position_plane = self.tiles.copy()
         player1_position_plane[self._positions[1]] = 1
@@ -79,7 +81,8 @@ class Quoridor(object):
         player1_walls_plane[self._player1_walls_remaining - 1, :, :] = 1
         player2_walls_plane[self._player2_walls_remaining - 1, :, :] = 1
 
-        # Set the wall planes
+        # 1 where vertical walls are placed
+        # if state size is ?x9x9, use only ?x8x8 field
         vertical_walls = np.pad(
             np.int8(self._intersections == -1).reshape([4, 4]),
             (0, 1),
@@ -87,6 +90,8 @@ class Quoridor(object):
             constant_values=0
         )
 
+        # 1 where horizontal walls are placed
+        # if state size is ?x9x9, use only ?x8x8 field
         horizontal_walls = np.pad(
             np.int8(self._intersections == 1).reshape([4, 4]),
             (0, 1),
@@ -94,6 +99,8 @@ class Quoridor(object):
             constant_values=0
         )
 
+        # 1 where any walls exist
+        # if state size is ?x9x9, use only ?x8x8 field
         no_walls = np.pad(
             np.int8(self._intersections == 0).reshape([4, 4]),
             (0, 1),
@@ -101,7 +108,7 @@ class Quoridor(object):
             constant_values=0
         )
 
-        # 不同玩家调整平面顺序
+        # stack
         if self.current_player == 1:
             state = np.stack([
                 no_walls,
@@ -175,7 +182,7 @@ class Quoridor(object):
 
         game_over, winner = self.has_a_winner()
         if game_over:
-            print("game over !winner is player" + str(winner))
+            #  print("game over !winner is player" + str(winner))
             done = True
         else:
             self.rotate_players()  # 切换玩家
@@ -302,8 +309,7 @@ class Quoridor(object):
             # 获取对手周围的挡板信息
             n_intersections = self._get_intersections(walls, opponent_loc)
             # 如果对手北面没有水平挡板，或者 玩家1在第八行，也就是倒数第二行
-            if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL \
-                    or (current_row == 3 and player == 1):
+            if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL:  # or (current_row == 3 and player == 1):
                 # 可以走向北两步，也就是NN
                 valid.append(self._DIRECTIONS['NN'])
             # 如果对手东-北面没有竖直挡板，并且自己东-北面没有竖直挡板，可以走两步NE
@@ -316,8 +322,7 @@ class Quoridor(object):
 
         elif opponent_south and intersections['SE'] != HORIZONTAL and intersections['SW'] != HORIZONTAL:
             s_intersections = self._get_intersections(walls, opponent_loc)
-            if s_intersections['SW'] != HORIZONTAL and s_intersections['SE'] != HORIZONTAL \
-                    or (current_row == 1 and player == 2):
+            if s_intersections['SW'] != HORIZONTAL and s_intersections['SE'] != HORIZONTAL:  # or (current_row == 1 and player == 2):
                 valid.append(self._DIRECTIONS['SS'])
 
             if s_intersections['SE'] != VERTICAL and intersections['SE'] != VERTICAL:
@@ -332,10 +337,12 @@ class Quoridor(object):
             if e_intersections['SE'] != VERTICAL and e_intersections['NE'] != VERTICAL:
                 valid.append(self._DIRECTIONS['EE'])
 
-            if e_intersections['NE'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if e_intersections['NE'] != HORIZONTAL and e_intersections['NW'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['NE'])
 
-            if e_intersections['SE'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if e_intersections['SE'] != HORIZONTAL and e_intersections['SW'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['SE'])
 
 
@@ -344,10 +351,12 @@ class Quoridor(object):
             if w_intersections['NW'] != VERTICAL and w_intersections['SW'] != VERTICAL:
                 valid.append(self._DIRECTIONS['WW'])
 
-            if w_intersections['NW'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if w_intersections['NW'] != HORIZONTAL and w_intersections['NE'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['NW'])
 
-            if w_intersections['SW'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if w_intersections['SW'] != HORIZONTAL and w_intersections['SE'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['SW'])
 
         return valid
@@ -376,6 +385,8 @@ class Quoridor(object):
                 sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
             else:
                 nw_intersection = 1
+                if current_tile > 24:
+                    print(current_tile)
                 sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
                 se_intersection = intersections[(current_tile - 5) - (location_row - 1)]
         elif s_border:
@@ -620,6 +631,8 @@ class Quoridor(object):
             tic = time.time()
             move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  # 获取落子以及概率
             toc = time.time()
+            #  print(move_probs[:12])
+            #  print(move_probs[12:])
             print("player %s  chosed move : %s ,prob: %.3f  spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
             # 保存数据
             states.append(self.state())

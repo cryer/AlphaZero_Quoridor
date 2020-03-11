@@ -30,7 +30,25 @@ class TreeNode(object):
         利用先验概率扩展，一次扩展所有的子节点，标准MCTS一次只扩展一个节点
         先验概率是由神经网络得到的。
         """
+        duplicated_node = False
+
+
         for action, prob in action_priors:
+            """
+            if action < 12:
+                duplicated_node = False
+                if not self.is_root():
+                    c_parent = copy.deepcopy(self._parent)
+                    while not c_parent.is_root():
+                        c_parent = copy.deepcopy(c_parent._parent)
+                        if c_parent._children.items() == self._children.items():
+                            duplicated_node = True
+                            break
+                if not duplicated_node:
+                    if action not in self._children:
+                        self._children[action] = TreeNode(self, prob)
+            else:
+            """
             if action not in self._children:
                 self._children[action] = TreeNode(self, prob)
 
@@ -59,7 +77,7 @@ class TreeNode(object):
         # 如果不是根节点，就进行递归
         if self._parent:
             self._parent.update_recursive(-leaf_value)
-        self.update(leaf_value)
+        self.update(-leaf_value)
 
     def get_value(self, c_puct):
         """
@@ -78,6 +96,9 @@ class TreeNode(object):
     # 判断是否是根节点，没有父节点的就是根节点
     def is_root(self):
         return self._parent is None
+
+    def get_parent(self):
+        return self._parent
 
 
 class MCTS(object):
@@ -98,7 +119,6 @@ class MCTS(object):
         self._policy = policy_value_fn
         self._c_puct = c_puct
         self._n_playout = n_playout
-
     # 修改 state -》 game
     def _playout(self, game):
         """
@@ -141,6 +161,11 @@ class MCTS(object):
         act_visits = [(act, node._n_visits) for act, node in self._root._children.items()]
         acts, visits = zip(*act_visits)
         act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
+
+        q_vals = [node._Q for act, node in self._root._children.items()]
+        print("-" * 30)
+        print("q_vals : " , q_vals)
+        print("-" * 30)
         return acts, act_probs
 
     def update_with_move(self, last_move):

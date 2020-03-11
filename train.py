@@ -10,14 +10,14 @@ from mcts import MCTSPlayer
 
 
 class TrainPipeline(object):
-    def __init__(self, init_model=None):
+    def __init__(self, init_model="./ckpt/current_policy.pth"):
         # 棋盘参数
         self.game = Quoridor()
         # 训练参数
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 400
+        self.n_playout = 500
         self.c_puct = 5
         self.buffer_size = 10000
         self.batch_size = 128  # 取1 测试ing
@@ -25,8 +25,8 @@ class TrainPipeline(object):
         self.play_batch_size = 1
         self.epochs = 5
         self.kl_targ = 0.02
-        self.check_freq = 50
-        self.game_batch_num = 150
+        self.check_freq = 10
+        self.game_batch_num = 1000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
         if init_model:

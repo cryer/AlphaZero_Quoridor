@@ -189,7 +189,7 @@ class PolicyValueNet(object):
         self.optimizer.step()
         # 计算熵，只是用于监控
         entropy = -torch.mean(torch.sum(torch.exp(log_act_probs) * log_act_probs, 1))
-        return loss.data[0], entropy.data[0]
+        return loss.data, entropy.data  # Change code for newest PyTorch version
 
     def get_policy_param(self):
         net_params = self.policy_value_net.state_dict()
