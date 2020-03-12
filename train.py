@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import random
+import time
+
 import numpy as np
 from collections import defaultdict, deque
 from quoridor import Quoridor
@@ -10,22 +12,22 @@ from mcts import MCTSPlayer
 
 
 class TrainPipeline(object):
-    def __init__(self, init_model="./ckpt/current_policy.pth"):
+    def __init__(self, init_model=None):
         # 棋盘参数
         self.game = Quoridor()
         # 训练参数
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 500
+        self.n_playout = 80
         self.c_puct = 5
-        self.buffer_size = 10000
-        self.batch_size = 128  # 取1 测试ing
+        self.buffer_size = 2000
+        self.batch_size = 32  # 取1 测试ing
         self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 1
+        self.play_batch_size = 20
         self.epochs = 5
         self.kl_targ = 0.02
-        self.check_freq = 10
+        self.check_freq = 5
         self.game_batch_num = 1000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
@@ -99,14 +101,18 @@ class TrainPipeline(object):
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
-                    print("LOSS:",loss)
+                    print("LOSS: %0.3f_" % loss.item())
+                    print("ENTROPY:",entropy)
                     # 保存loss
-                    with open('loss.txt', 'a') as f:
-                        f.writelines(str(loss) + '\n')
+                    with open('loss3.txt', 'a') as f:
+                        f.writelines('loss : ')
+                        f.writelines(str(loss) + ' ')
+                        f.writelines('  entropy : ')
+                        f.writelines(str(entropy) + '\n')
                 if (i + 1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model('current_policy')  # 保存模型
+                    self.policy_value_net.save_model('current_policy_' + str("%0.3f_" % loss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 

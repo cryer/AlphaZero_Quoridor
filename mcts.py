@@ -23,8 +23,9 @@ class TreeNode(object):
         self._Q = 0
         self._u = 0
         self._P = prior_p
+        # self._game = game
 
-    def expand(self, action_priors):
+    def expand(self, action_priors, current_game):
         """
         扩展，蒙特卡洛树的基本操作之一。
         利用先验概率扩展，一次扩展所有的子节点，标准MCTS一次只扩展一个节点
@@ -48,6 +49,26 @@ class TreeNode(object):
                     if action not in self._children:
                         self._children[action] = TreeNode(self, prob)
             else:
+            """
+            """
+            duplicated_node = False
+
+            if self._parent != None and self._parent._game != None: # when `this` node and the parent of this node are both not root
+                current_node = self._parent
+
+                while True:
+
+                    if not np.array_equal(current_node._game.state(), current_game.state()):
+                        current_node = current_node._parent
+
+                        if current_node == None or current_node._game == None:
+                            break
+                    else:
+                        duplicated_node = True
+                        break
+
+            if duplicated_node:
+                print("Duplicated node found")
             """
             if action not in self._children:
                 self._children[action] = TreeNode(self, prob)
@@ -75,9 +96,17 @@ class TreeNode(object):
         递归更新所有祖先的相关信息，也就是递归调用update
         """
         # 如果不是根节点，就进行递归
+        """
+        if leaf_value <= 0:
+            leaf_value -=(-1 - leaf_value) * 0.1
+        else:
+            leaf_value -= -leaf_value * 0.1
+        """
         if self._parent:
+            # print(leaf_value)
             self._parent.update_recursive(-leaf_value)
-        self.update(-leaf_value)
+
+        self.update(leaf_value)
 
     def get_value(self, c_puct):
         """
@@ -139,12 +168,13 @@ class MCTS(object):
         end, winner = game.has_a_winner()
         # 没有结束，扩展节点，利用网络输出的先验概率
         if not end:
-            node.expand(action_probs)
+            node.expand(action_probs, game.state())
         # 结束了，返回真实的叶子结点值，不需要网络评估了。
         else:
             leaf_value = 1.0 if winner == game.get_current_player() else -1.0
         # 迭代更新所有祖先节点
-        node.update_recursive(-leaf_value)
+        # print("call update")
+        node.update_recursive(leaf_value)
 
     def get_move_probs(self, game, temp=1e-3):
         """
@@ -181,7 +211,7 @@ class MCTS(object):
 
 class MCTSPlayer(object):
     # 初始化AI，基于MCTS
-    def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=0):
+    def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=1):
         self.mcts = MCTS(policy_value_function, c_puct, n_playout)
         self._is_selfplay = is_selfplay
 

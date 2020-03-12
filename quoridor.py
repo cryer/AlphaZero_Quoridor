@@ -631,8 +631,8 @@ class Quoridor(object):
             tic = time.time()
             move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  # 获取落子以及概率
             toc = time.time()
-            #  print(move_probs[:12])
-            #  print(move_probs[12:])
+            print('[Move probs]\n', move_probs[:12])
+            print('[Wall probs]\n', move_probs[12:])
             print("player %s  chosed move : %s ,prob: %.3f  spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
             # 保存数据
             states.append(self.state())
