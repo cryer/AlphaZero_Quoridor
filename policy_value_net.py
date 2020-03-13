@@ -160,7 +160,7 @@ class PolicyValueNet(object):
         # print("legal:",legal_positions)
         # print("probs:", act_probs)
         act_probs = zip(legal_positions, act_probs[legal_positions])
-        value = value.data[0][0]
+        value = value.item()
         return act_probs, value
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):

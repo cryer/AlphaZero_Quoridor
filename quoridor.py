@@ -589,6 +589,8 @@ class Quoridor(object):
             print(render_row)
 
         """
+        # Original print board code
+        
         grid = [['{dash:4}'.format(dash=dash) for i in range(5)] for i in range(5)]
         i_reshaped = self._intersections.reshape([4, 4])
         

@@ -19,16 +19,16 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 80
+        self.n_playout = 20
         self.c_puct = 5
-        self.buffer_size = 2000
+        self.buffer_size = 10000
         self.batch_size = 32  # 取1 测试ing
         self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 20
+        self.play_batch_size = 1
         self.epochs = 5
         self.kl_targ = 0.02
         self.check_freq = 5
-        self.game_batch_num = 1000
+        self.game_batch_num = 100
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
         if init_model:
@@ -93,11 +93,13 @@ class TrainPipeline(object):
                 kl, self.lr_multiplier, loss, entropy, explained_var_old, explained_var_new))
         return loss, entropy
 
+
     def run(self):
-        """训练"""
         try:
+            self.collect_selfplay_data(300)
+
             for i in range(self.game_batch_num):
-                self.collect_selfplay_data(self.play_batch_size)
+                self.collect_selfplay_data(self.play_batch_size)    # collect_s
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
@@ -117,6 +119,7 @@ class TrainPipeline(object):
             print('\n\rquit')
 
 
+# Start
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline()
+    training_pipeline = TrainPipeline(init_model=None)
     training_pipeline.run()
