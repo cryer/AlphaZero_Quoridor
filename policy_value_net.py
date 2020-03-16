@@ -61,15 +61,15 @@ class policy_value_net(nn.Module):
         self.res4 = block(planes, planes)
         self.res5 = block(planes, planes)
         # 价值头
-        self.conv2 = nn.Conv2d(16, 4, kernel_size=3, stride=stride,
+        self.conv2 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(4)
-        self.fc1 = nn.Linear(100, 32)
+        self.bn2 = nn.BatchNorm2d(2)
+        self.fc1 = nn.Linear(50, 32)
         self.fc2 = nn.Linear(32, 1)
         # 策略头
-        self.conv3 = nn.Conv2d(16, 4, kernel_size=3, stride=stride,
+        self.conv3 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
-        self.bn3 = nn.BatchNorm2d(4)
+        self.bn3 = nn.BatchNorm2d(2)
         self.fc3 = nn.Linear(50, 44)
 
 
@@ -86,7 +86,7 @@ class policy_value_net(nn.Module):
         value_out = self.conv2(out)
         value_out = self.bn2(value_out)
         value_out = self.relu(value_out)
-        value_out = value_out.view(-1, 100)
+        value_out = value_out.view(-1, 50)
         value_out = self.fc1(value_out)
         value_out = F.tanh(self.fc2(value_out))
         # 策略头
@@ -181,16 +181,19 @@ class PolicyValueNet(object):
 
         # 向前传播
         log_act_probs, value = self.policy_value_net(state_batch)
-        # 损失公式： loss = (z - v)^2 - pi^T * log(p) + c||theta||^2，也就是value_loss+policy_loss
+        
         value_loss = F.mse_loss(value.view(-1), winner_batch)
-        policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))
+
+        print(mcts_probs.shape, log_act_probs.shape)
+        policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))        
+
         loss = value_loss + policy_loss
         # 反向传播，优化损失
         loss.backward()
         self.optimizer.step()
         # 计算熵，只是用于监控
         entropy = -torch.mean(torch.sum(torch.exp(log_act_probs) * log_act_probs, 1))
-        return loss.data, entropy.data  # Change code for newest PyTorch version
+        return value_loss.data, policy_loss.data, entropy.data  # Change code for newest PyTorch version
 
     def get_policy_param(self):
         net_params = self.policy_value_net.state_dict()

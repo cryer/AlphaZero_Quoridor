@@ -11,6 +11,11 @@ from policy_value_net import PolicyValueNet
 from mcts import MCTSPlayer
 
 
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter()
+
+
 class TrainPipeline(object):
     def __init__(self, init_model=None):
         # 棋盘参数
@@ -74,7 +79,7 @@ class TrainPipeline(object):
         #                                                                     新旧之间的KL散度来控制学习速率的退火
         # 开始训练epochs个轮次
         for i in range(self.epochs):
-            loss, entropy = self.policy_value_net.train_step(state_batch, mcts_probs_batch, winner_batch,
+            valloss, polloss, entropy = self.policy_value_net.train_step(state_batch, mcts_probs_batch, winner_batch,
                                                              self.learn_rate * self.lr_multiplier)
             new_probs, new_v = self.policy_value_net.policy_value(state_batch)  # 计算新的概率和价值
             kl = np.mean(np.sum(old_probs * (np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
@@ -89,28 +94,28 @@ class TrainPipeline(object):
         explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
         explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
         print(
-            "kl:{:.5f},lr_multiplier:{:.3f},loss:{},entropy:{},explained_var_old:{:.3f},explained_var_new:{:.3f}".format(
-                kl, self.lr_multiplier, loss, entropy, explained_var_old, explained_var_new))
-        return loss, entropy
+            "kl:{:.5f},lr_multiplier:{:.3f},value loss:{},policy loss:[],entropy:{},explained_var_old:{:.3f},explained_var_new:{:.3f}".format(
+                kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
+        return valloss, polloss, entropy
 
 
     def run(self):
         try:
-            self.collect_selfplay_data(300)
+            self.collect_selfplay_data(0)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
-                    loss, entropy = self.policy_update()
-                    print("LOSS: %0.3f_" % loss.item())
+                    valloss, polloss, entropy = self.policy_update()
+                    print("VALUE LOSS: %0.3f " % valloss.item(), "POLICY LOSS: %0.3f " % polloss.item())
                     print("ENTROPY:",entropy)
                     # 保存loss
-                    with open('loss3.txt', 'a') as f:
-                        f.writelines('loss : ')
-                        f.writelines(str(loss) + ' ')
-                        f.writelines('  entropy : ')
-                        f.writelines(str(entropy) + '\n')
+
+                    writer.add_scalar("Val Loss/train", valloss.item(), i)
+                    writer.add_scalar("Policy Loss/train", polloss.item(), i)
+                    writer.add_scalar("Entory/train", entropy, i)
+
                 if (i + 1) % self.check_freq == 0:
                     count += 1
                     print("current self-play batch: {}".format(i + 1))
