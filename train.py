@@ -19,7 +19,7 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 20
+        self.n_playout = 100
         self.c_puct = 5
         self.buffer_size = 10000
         self.batch_size = 32  # 取1 测试ing
@@ -97,7 +97,7 @@ class TrainPipeline(object):
     def run(self):
         try:
             self.collect_selfplay_data(300)
-
+            count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
@@ -112,9 +112,11 @@ class TrainPipeline(object):
                         f.writelines('  entropy : ')
                         f.writelines(str(entropy) + '\n')
                 if (i + 1) % self.check_freq == 0:
+                    count += 1
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model('current_policy_' + str("%0.3f_" % loss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
+                    # Add generation to filename
+                    self.policy_value_net.save_model('current_policy_generation_' + str(count) + '_' + str("%0.3f_" % loss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 

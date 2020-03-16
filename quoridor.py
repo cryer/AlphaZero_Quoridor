@@ -53,8 +53,8 @@ class Quoridor(object):
         # Vertical Wall - -1
         self._intersections = np.zeros(16)
 
-        self._player1_walls_remaining = 4
-        self._player2_walls_remaining = 4
+        self._player1_walls_remaining = 3
+        self._player2_walls_remaining = 3
 
     def state(self):
         """Returns a set of 5x5 planes that represent the game state.
@@ -75,8 +75,8 @@ class Quoridor(object):
         player2_position_plane[self._positions[2]] = 1
         player2_position_plane = player2_position_plane.reshape([5, 5])
 
-        player1_walls_plane = np.zeros([4, 5, 5])
-        player2_walls_plane = np.zeros([4, 5, 5])
+        player1_walls_plane = np.zeros([3, 5, 5])
+        player2_walls_plane = np.zeros([3, 5, 5])
 
         player1_walls_plane[self._player1_walls_remaining - 1, :, :] = 1
         player2_walls_plane[self._player2_walls_remaining - 1, :, :] = 1

@@ -16,64 +16,52 @@ class TreeNode(object):
     """
 
     # 初始化节点，包括父节点，子节点，N,Q，P，以及额外的奖励u的信息
-    def __init__(self, parent, prior_p, tile_visits):
+    def __init__(self, parent, prior_p, state):
         self._parent = parent
         self._children = {}  # 子节点用字典表示，是一个从动作(落子)到节点的映射。
         self._n_visits = 0
-        self._t_visits = tile_visits
+        self._state = state
         self._Q = 0
         self._u = 0
         self._P = prior_p
         # self._game = game
 
-    def expand(self, action_priors, position):
-        """
-        扩展，蒙特卡洛树的基本操作之一。
-        利用先验概率扩展，一次扩展所有的子节点，标准MCTS一次只扩展一个节点
-        先验概率是由神经网络得到的。
-        """
+    def expand(self, action_priors, game):
         duplicated_node = False
-
+        parent_node = None
+        parent_state = None
 
         for action, prob in action_priors:
-            """
             if action < 12:
+                """
+                Code for restrict dummy expand
+                """
                 duplicated_node = False
-                if not self.is_root():
-                    c_parent = copy.deepcopy(self._parent)
-                    while not c_parent.is_root():
-                        c_parent = copy.deepcopy(c_parent._parent)
-                        if c_parent._children.items() == self._children.items():
-                            duplicated_node = True
-                            break
-                if not duplicated_node:
-                    if action not in self._children:
-                        self._children[action] = TreeNode(self, prob)
-            else:
-            """
-            """
-            duplicated_node = False
 
-            if self._parent != None and self._parent._game != None: # when `this` node and the parent of this node are both not root
-                current_node = self._parent
+                # copy game - step action - get state after step(action) end
+                c_game = copy.deepcopy(game)
+                c_game.step(action)
+                next_state = c_game.state()
 
-                while True:
+                # if 'self' is not root node
+                if self._parent is not None:
+                    parent_node = self._parent  # get parent node
+                    parent_state = parent_node._state  # get parent node state
 
-                    if not np.array_equal(current_node._game.state(), current_game.state()):
-                        current_node = current_node._parent
-
-                        if current_node == None or current_node._game == None:
-                            break
-                    else:
+                # Compare all states in nodes and next state
+                while parent_node is not None:
+                    if np.array_equal(parent_state, next_state):
                         duplicated_node = True
                         break
+                    else:
+                        # get parent-parent node and parent-parent node state
+                        parent_node = parent_node._parent
+                        if parent_node is not None:
+                            parent_state = parent_node._state
 
-            if duplicated_node:
-                print("Duplicated node found")
-            """
-            if action not in self._children:
-                self._t_visits[position] += 1.0
-                self._children[action] = TreeNode(self, prob, self._t_visits)
+            # Add condition 'not duplicated_node'
+            if not duplicated_node and action not in self._children:
+                self._children[action] = TreeNode(self, prob, next_state)
 
     def select(self, c_puct):
         """
@@ -98,11 +86,6 @@ class TreeNode(object):
         递归更新所有祖先的相关信息，也就是递归调用update
         """
         # 如果不是根节点，就进行递归
-
-        if leaf_value <= 0:
-            leaf_value -=(-1 - leaf_value) * 0.1
-        else:
-            leaf_value -= -leaf_value * 0.1
 
         if self._parent:
             # print(leaf_value)
@@ -146,10 +129,11 @@ class MCTS(object):
         表示这一步导致的最后的胜负情况。
         c_puct -- 0到正无穷之间的一个数，越大意味着越依赖以前
         """
-        self._root = TreeNode(None, 1.0, np.zeros(25))
+        self._root = TreeNode(None, 1.0, None)
         self._policy = policy_value_fn
         self._c_puct = c_puct
         self._n_playout = n_playout
+
     # 修改 state -》 game
     def _playout(self, game):
         """
@@ -170,7 +154,7 @@ class MCTS(object):
         end, winner = game.has_a_winner()
         # 没有结束，扩展节点，利用网络输出的先验概率
         if not end:
-            node.expand(action_probs, game._positions[game.current_player])
+            node.expand(action_probs, game)
         # 结束了，返回真实的叶子结点值，不需要网络评估了。
         else:
             leaf_value = 1.0 if winner == game.get_current_player() else -1.0
@@ -196,16 +180,16 @@ class MCTS(object):
 
         q_vals = [node._Q for act, node in self._root._children.items()]
         print("-" * 30)
-        print("q_vals : " , q_vals)
+        print("q_vals : ", q_vals)
         print("-" * 30)
         return acts, act_probs
 
-    def update_with_move(self, last_move, tile_visits):
+    def update_with_move(self, last_move, state):
         if last_move in self._root._children:  # 根据对面的落子，复用子树，
             self._root = self._root._children[last_move]
             self._root._parent = None
         else:  # 否则，重新开始一个新的搜索树
-            self._root = TreeNode(None, 1.0, tile_visits)
+            self._root = TreeNode(None, 1.0, state)
 
     def __str__(self):
         return "MCTS"
@@ -213,7 +197,7 @@ class MCTS(object):
 
 class MCTSPlayer(object):
     # 初始化AI，基于MCTS
-    def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=0):
+    def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=1):
         self.mcts = MCTS(policy_value_function, c_puct, n_playout)
         self._is_selfplay = is_selfplay
 
@@ -223,7 +207,7 @@ class MCTSPlayer(object):
 
     # 重置玩家
     def reset_player(self):
-        self.mcts.update_with_move(-1, np.zeros(25))
+        self.mcts.update_with_move(-1, None)
 
     # 获取落子
     def choose_action(self, game, temp=1e-3, return_prob=0):
@@ -232,18 +216,17 @@ class MCTSPlayer(object):
         if len(sensible_moves) > 0:  # 棋盘未耗尽时
             acts, probs = self.mcts.get_move_probs(game, temp)  # 获取落子以及对应的落子概率
             move_probs[list(acts)] = probs  # 将概率转到move_probs列表中
+            state = game.state()
             # 如果是自博弈的话
             if self._is_selfplay:
                 # 为了增加探索，保证每个节点都有可能被选中，加入狄利克雷噪声
-                move = np.random.choice(acts, p=0.65 * probs + 0.35 * np.random.dirichlet(0.3 * np.ones(len(probs))))
-                if move < 12:
-                    print("Positions : ", game._positions[game.current_player])
-                self.mcts.update_with_move(move, game._positions[game.current_player])  # 更新根节点，并且复用子树
+                move = np.random.choice(acts, p=0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs))))
+                self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
             else:
                 # 如果采用默认的temp = le-3，几乎相当于选择最高概率的落子
                 move = np.random.choice(acts, p=probs)
                 # 重置根节点
-                self.mcts.update_with_move(-1, game._positions[game.current_player])
+                self.mcts.update_with_move(-1, state)
             # location = board.move_to_location(move)
             #                print("AI move: %d,%d\n" % (location[0], location[1]))
             # 选择返回落子和相应的概率，还是只返回落子，因为自博弈时需要保存概率来训练网络，而真正落子时只要知道move就行了
