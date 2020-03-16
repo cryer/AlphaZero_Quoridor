@@ -101,7 +101,7 @@ class TrainPipeline(object):
 
     def run(self):
         try:
-            self.collect_selfplay_data(0)
+            self.collect_selfplay_data(50)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
@@ -121,7 +121,7 @@ class TrainPipeline(object):
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
                     # Add generation to filename
-                    self.policy_value_net.save_model('current_policy_generation_' + str(count) + '_' + str("%0.3f_" % loss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
+                    self.policy_value_net.save_model('current_policy_generation_' + str(count) + '_' + str("%0.3f_" % valloss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 
