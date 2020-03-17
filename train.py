@@ -24,7 +24,7 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 100
+        self.n_playout = 200
         self.c_puct = 5
         self.buffer_size = 10000
         self.batch_size = 32  # 取1 测试ing
@@ -32,8 +32,8 @@ class TrainPipeline(object):
         self.play_batch_size = 1
         self.epochs = 5
         self.kl_targ = 0.02
-        self.check_freq = 5
-        self.game_batch_num = 100
+        self.check_freq = 50
+        self.game_batch_num = 500
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
         if init_model:
@@ -101,7 +101,7 @@ class TrainPipeline(object):
 
     def run(self):
         try:
-            self.collect_selfplay_data(50)
+            self.collect_selfplay_data(100)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
@@ -121,12 +121,12 @@ class TrainPipeline(object):
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
                     # Add generation to filename
-                    self.policy_value_net.save_model('current_policy_generation_' + str(count) + '_' + str("%0.3f_" % valloss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
+                    self.policy_value_net.save_model('cp_gen_3_' + str(count) + '_' + str("%0.3f_" % valloss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 
 
 # Start
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(init_model=None)
+    training_pipeline = TrainPipeline(init_model="cp_gen_2_20_0.331_2020-03-17")
     training_pipeline.run()
