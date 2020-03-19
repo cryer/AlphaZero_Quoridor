@@ -208,6 +208,11 @@ class Quoridor(object):
             game_over = True
         return game_over, winner
 
+    # check that pawn moved to dead end
+    def is_dead_end(self, game):
+        current_player = self.get_current_player()
+
+
     # 获取奖励
     def _get_rewards(self):
         done = True
