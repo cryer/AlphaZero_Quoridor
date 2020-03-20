@@ -151,7 +151,7 @@ class MCTS(object):
         # state = game.state()
         action_probs, leaf_value = self._policy(game)
         # 检查是否游戏结束
-        end, winner = game.has_a_winner()
+        end, winner = game.has_a_winner_smarter()
         # 没有结束，扩展节点，利用网络输出的先验概率
         if not end:
             # Add an incompleted code to make pawn avoid dead-end section.
