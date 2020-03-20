@@ -47,15 +47,18 @@ def text(screen, text, position1=2, position2=0.6, color=BLUE):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--player_type", type=int, default=1,
-                        help="palyer type you want to fight,1 is human,2 is computer")
-    parser.add_argument("--computer_type", type=int, default=0, help="computer type,1 is Alpha MCTS,2 is pure MCTS")
+                        help="Player type you want to fight: 1 is human, 2 is computer")
+    parser.add_argument("--computer_type", type=int, default=0, help="Computer type, 1 is Alpha MCTS, 2 is pure MCTS, 3 is random agent")
     args = parser.parse_args()
 
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet("current_policy_generation_200_1.199_2020-03-19").policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
-    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 50层400秒
+    MCTS_Alpha = A_Player(PolicyValueNet().policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
+    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 
+
+    random = BaseAgent()
+    
 
     if args.player_type == 1:
         player_types = {1: 'human', 2: 'human'}
@@ -68,6 +71,8 @@ def main():
             players = {1: human1, 2: MCTS_Alpha}
         elif args.computer_type == 2:
             players = {1: human1, 2: MCTS_Pure}
+        elif args.computer_type == 3:
+            players = {1: human1, 2: random}
         elif args.computer_type == 0:
             print("Set computer type to 1 or 2 for choosing computer!")
             # pygame.quit()
