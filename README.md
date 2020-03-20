@@ -26,6 +26,7 @@ pygame
 numpy
 ```
 
+* Play against Human agent
 ```
 python game.py --player_type 1
 ```
