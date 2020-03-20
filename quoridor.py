@@ -6,6 +6,10 @@ from collections import deque
 
 import copy
 
+HORIZONTAL = 1
+VERTICAL = -1
+
+
 class Quoridor(object):
     HORIZONTAL = 1
     VERTICAL = -1
@@ -37,8 +41,8 @@ class Quoridor(object):
 
         # Initialize Player Locations
         self._positions = {
-            1: 2,
-            2: 22
+            1: 22,
+            2: 2
         }
 
         self._DIRECTIONS = {
@@ -144,8 +148,8 @@ class Quoridor(object):
 
     def get_shortest_path(self):
 
-        player1_target = 4
-        player2_target = 0
+        player1_target = 0
+        player2_target = 4
 
         player1_position = self._positions[1]
         player2_position = self._positions[2]
@@ -210,18 +214,18 @@ class Quoridor(object):
         return done, winner
 
     # 
-    def has_a_winner(self):
+    def has_a_winner2(self):
         game_over = False
         winner = None
-        if self._positions[2] < 5:
+        if self._positions[2] > 19:
             winner = 2
             game_over = True
-        elif self._positions[1] > 19:
+        elif self._positions[1] < 5:
             winner = 1
             game_over = True
         return game_over, winner
    
-    def has_a_winner_smarter(self):
+    def has_a_winner(self):
         game_over = False
         winner = None
         dist1, dist2 = self.get_shortest_path()
@@ -238,72 +242,61 @@ class Quoridor(object):
         current_player = self.get_current_player()
 
 
-    def _get_rewards(self):
-        done = True
-        if self._positions[2] < 5:
-            rewards, done = (1, -1)
-        elif self._positions[1] > 19:
-            rewards = (-1, 1)
-        else:
-            rewards = (0, 0)
-            done = False
-        return rewards, done
-
 
     def _return_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
-            return self._positions[player] + 5
-        elif action == self._DIRECTIONS['S']:
             return self._positions[player] - 5
+        elif action == self._DIRECTIONS['S']:
+            return self._positions[player] + 5
         elif action == self._DIRECTIONS['E']:
             return self._positions[player] + 1
         elif action == self._DIRECTIONS['W']:
             return self._positions[player] - 1
         elif action == self._DIRECTIONS['NN']:
-            return self._positions[player] + 10
-        elif action == self._DIRECTIONS['SS']:
             return self._positions[player] - 10
+        elif action == self._DIRECTIONS['SS']:
+            return self._positions[player] + 10
         elif action == self._DIRECTIONS['EE']:
             return self._positions[player] + 2
         elif action == self._DIRECTIONS['WW']:
             return self._positions[player] - 2
         elif action == self._DIRECTIONS['NW']:
-            return self._positions[player] + 4
-        elif action == self._DIRECTIONS['NE']:
-            return self._positions[player] + 6
-        elif action == self._DIRECTIONS['SW']:
             return self._positions[player] - 6
-        elif action == self._DIRECTIONS['SE']:
+        elif action == self._DIRECTIONS['NE']:
             return self._positions[player] - 4
+        elif action == self._DIRECTIONS['SW']:
+            return self._positions[player] + 4
+        elif action == self._DIRECTIONS['SE']:
+            return self._positions[player] + 6
         else:
             raise ValueError("Invalid Pawn Action: {action}".format(action=action))
 
 
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
-            self._positions[player] += 5
-        elif action == self._DIRECTIONS['S']:
             self._positions[player] -= 5
+        elif action == self._DIRECTIONS['S']:
+            self._positions[player] += 5
         elif action == self._DIRECTIONS['E']:
             self._positions[player] += 1
         elif action == self._DIRECTIONS['W']:
             self._positions[player] -= 1
         elif action == self._DIRECTIONS['NN']:
-            self._positions[player] += 10
-        elif action == self._DIRECTIONS['SS']:
             self._positions[player] -= 10
+        elif action == self._DIRECTIONS['SS']:
+            self._positions[player] += 10
         elif action == self._DIRECTIONS['EE']:
             self._positions[player] += 2
         elif action == self._DIRECTIONS['WW']:
             self._positions[player] -= 2
         elif action == self._DIRECTIONS['NW']:
-            self._positions[player] += 4
-        elif action == self._DIRECTIONS['NE']:
-            self._positions[player] += 6
-        elif action == self._DIRECTIONS['SW']:
             self._positions[player] -= 6
-        elif action == self._DIRECTIONS['SE']:
+        elif action == self._DIRECTIONS['NE']:
             self._positions[player] -= 4
+        elif action == self._DIRECTIONS['SW']:
+            self._positions[player] += 4
+        elif action == self._DIRECTIONS['SE']:
+            self._positions[player] += 6
         else:
             raise ValueError("Invalid Pawn Action: {action}".format(action=action))
 
@@ -333,12 +326,10 @@ class Quoridor(object):
             self.last_player = 2
 
     def _valid_pawn_actions(self, walls, location, opponent_loc, player=1):
-        HORIZONTAL = 1
-        VERTICAL = -1
 
         valid = []
-        opponent_north = (location == opponent_loc - 5)
-        opponent_south = (location == opponent_loc + 5)
+        opponent_north = (location == opponent_loc + 5)
+        opponent_south = (location == opponent_loc - 5)
         opponent_east = (location == opponent_loc - 1)
         opponent_west = (location == opponent_loc + 1)
 
@@ -349,10 +340,12 @@ class Quoridor(object):
         s = intersections['SW'] != HORIZONTAL and intersections['SE'] != HORIZONTAL and not opponent_south
         e = intersections['NE'] != VERTICAL and intersections['SE'] != VERTICAL and not opponent_east
         w = intersections['NW'] != VERTICAL and intersections['SW'] != VERTICAL and not opponent_west
-        if n or (player == 1 and current_row == 4): valid.append(self._DIRECTIONS['N'])
-        if s or (player == 2 and current_row == 0): valid.append(self._DIRECTIONS['S'])
+        if n: valid.append(self._DIRECTIONS['N'])
+        if s: valid.append(self._DIRECTIONS['S'])
         if e: valid.append(self._DIRECTIONS['E'])
         if w: valid.append(self._DIRECTIONS['W'])
+
+
         if opponent_north and intersections['NE'] != HORIZONTAL and intersections['NW'] != HORIZONTAL:
             n_intersections = self._get_intersections(walls, opponent_loc)
             if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL:  # or (current_row == 3 and player == 1):
@@ -407,66 +400,71 @@ class Quoridor(object):
         return valid
 
     def _get_intersections(self, intersections, current_tile):
+
+
         """Gets the four intersections for a given tile."""
         location_row = current_tile // self.N_ROWS
-        n_border = current_tile > 19
+        s_border = current_tile > 19
         e_border = current_tile % 5 == 4
-        s_border = current_tile < 5
+        n_border = current_tile < 5
         w_border = current_tile % 5 == 0
 
         if n_border:
-            ne_intersection = 1
+            ne_intersection = HORIZONTAL
+
+            location_row = 0
             if w_border:
-                nw_intersection = -1
-                sw_intersection = -1
-                se_intersection = intersections[(current_tile - 5) - (location_row - 1)]
+                nw_intersection = VERTICAL
+                sw_intersection = VERTICAL
+                se_intersection = intersections[current_tile]
             elif e_border:
-                nw_intersection = 1
-                se_intersection = -1
+                nw_intersection = HORIZONTAL
+                se_intersection = VERTICAL
                 if current_tile > 24:
                     print(current_tile)
-                sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
+                sw_intersection = intersections[current_tile - 1]
             else:
-                nw_intersection = 1
+                nw_intersection = HORIZONTAL
                 if current_tile > 24:
                     print(current_tile)
-                sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
-                se_intersection = intersections[(current_tile - 5) - (location_row - 1)]
+                sw_intersection = intersections[current_tile - 1]
+                se_intersection = intersections[current_tile]
         elif s_border:
-            sw_intersection = 1
+            location_row = 4
+            sw_intersection = HORIZONTAL
             if w_border:
-                nw_intersection = -1
-                se_intersection = 1
-                ne_intersection = intersections[current_tile - location_row]
+                nw_intersection = VERTICAL
+                se_intersection = HORIZONTAL
+                ne_intersection = intersections[(current_tile- 5) - (location_row-1)]
             elif e_border:
-                se_intersection = -1
-                ne_intersection = -1
-                nw_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = VERTICAL
+                ne_intersection = VERTICAL
+                nw_intersection = intersections[(current_tile - 5) - location_row]
             else:
-                se_intersection = 1
-                ne_intersection = intersections[current_tile - location_row]
-                nw_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = HORIZONTAL
+                ne_intersection = intersections[(current_tile-5) - (location_row -1)]
+                nw_intersection = intersections[(current_tile - 5) - location_row]
 
 
         # West but not north or south
         elif w_border:
-            nw_intersection = -1
-            sw_intersection = -1
-            ne_intersection = intersections[current_tile - location_row]
-            se_intersection = intersections[(current_tile - 5) - (location_row - 1)]
+            nw_intersection = VERTICAL
+            sw_intersection = VERTICAL
+            se_intersection = intersections[current_tile - location_row]
+            ne_intersection = intersections[(current_tile - 5) - (location_row - 1)]
 
         elif e_border:
-            ne_intersection = -1
-            se_intersection = -1
-            nw_intersection = intersections[current_tile - location_row - 1]
-            sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
+            ne_intersection = VERTICAL
+            se_intersection = VERTICAL
+            sw_intersection = intersections[current_tile - location_row - 1]
+            nw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
 
         # No borders
         else:
-            ne_intersection = intersections[current_tile - location_row]
-            nw_intersection = intersections[current_tile - location_row - 1]
-            sw_intersection = intersections[(current_tile - 5) - (location_row - 1) - 1]
-            se_intersection = intersections[(current_tile - 5) - (location_row - 1)]
+            ne_intersection = intersections[(current_tile -5) - (location_row-1)]
+            nw_intersection = intersections[(current_tile -5) - location_row ]
+            sw_intersection = intersections[current_tile - (location_row +1)]
+            se_intersection = intersections[current_tile - location_row]
 
         return {'NW': nw_intersection,
                 'NE': ne_intersection,
@@ -517,8 +515,8 @@ class Quoridor(object):
         return not self._blocks_path(ix, self.VERTICAL)
 
     def _blocks_path(self, wall_location, orientation):
-        player1_target = 4
-        player2_target = 0
+        player1_target = 0
+        player2_target = 4
 
         player1_position = self._positions[1]
         player2_position = self._positions[2]
@@ -549,29 +547,29 @@ class Quoridor(object):
 
             for direction in valid_directions:
                 if direction == self._DIRECTIONS['N']:
-                    new_position = current_position + 5
-                elif direction == self._DIRECTIONS['S']:
                     new_position = current_position - 5
+                elif direction == self._DIRECTIONS['S']:
+                    new_position = current_position + 5
                 elif direction == self._DIRECTIONS['E']:
                     new_position = current_position + 1
                 elif direction == self._DIRECTIONS['W']:
                     new_position = current_position - 1
                 elif direction == self._DIRECTIONS['NN']:
-                    new_position = current_position + 10
-                elif direction == self._DIRECTIONS['SS']:
                     new_position = current_position - 10
+                elif direction == self._DIRECTIONS['SS']:
+                    new_position = current_position + 10
                 elif direction == self._DIRECTIONS['EE']:
                     new_position = current_position + 2
                 elif direction == self._DIRECTIONS['WW']:
                     new_position = current_position - 2
                 elif direction == self._DIRECTIONS['NE']:
-                    new_position = current_position + 6
-                elif direction == self._DIRECTIONS['NW']:
-                    new_position = current_position + 4
-                elif direction == self._DIRECTIONS['SW']:
-                    new_position = current_position - 6
-                elif direction == self._DIRECTIONS['SE']:
                     new_position = current_position - 4
+                elif direction == self._DIRECTIONS['NW']:
+                    new_position = current_position - 6
+                elif direction == self._DIRECTIONS['SW']:
+                    new_position = current_position + 4
+                elif direction == self._DIRECTIONS['SE']:
+                    new_position = current_position + 6
                 else:
                     raise ValueError('Invalid direction - should never happen')
 
@@ -614,29 +612,29 @@ class Quoridor(object):
 
                 for direction in valid_directions:
                     if direction == self._DIRECTIONS['N']:
-                        new_position = current_position + 5
-                    elif direction == self._DIRECTIONS['S']:
                         new_position = current_position - 5
+                    elif direction == self._DIRECTIONS['S']:
+                        new_position = current_position + 5
                     elif direction == self._DIRECTIONS['E']:
                         new_position = current_position + 1
                     elif direction == self._DIRECTIONS['W']:
                         new_position = current_position - 1
                     elif direction == self._DIRECTIONS['NN']:
-                        new_position = current_position + 10
-                    elif direction == self._DIRECTIONS['SS']:
                         new_position = current_position - 10
+                    elif direction == self._DIRECTIONS['SS']:
+                        new_position = current_position + 10
                     elif direction == self._DIRECTIONS['EE']:
                         new_position = current_position + 2
                     elif direction == self._DIRECTIONS['WW']:
                         new_position = current_position - 2
                     elif direction == self._DIRECTIONS['NE']:
-                        new_position = current_position + 6
-                    elif direction == self._DIRECTIONS['NW']:
-                        new_position = current_position + 4
-                    elif direction == self._DIRECTIONS['SW']:
-                        new_position = current_position - 6
-                    elif direction == self._DIRECTIONS['SE']:
                         new_position = current_position - 4
+                    elif direction == self._DIRECTIONS['NW']:
+                        new_position = current_position - 6
+                    elif direction == self._DIRECTIONS['SW']:
+                        new_position = current_position + 4
+                    elif direction == self._DIRECTIONS['SE']:
+                        new_position = current_position + 6
                     else:
                         raise ValueError('Invalid direction - should never happen')
 
@@ -755,13 +753,19 @@ class Quoridor(object):
             toc = time.time()
             print('[Move probs]\n', move_probs[:12])
             print('[Wall probs]\n', move_probs[12:])
-            print("player %s  chosed move : %s ,prob: %.3f  spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
+            print("player %s chose move : %s, prob: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
+
             # 
             states.append(self.state())
             mcts_probs.append(move_probs)
             current_players.append(self.current_player)
             # 
             self.step(move)
+
+            dist1, dist2 = self.get_shortest_path()
+            print("Player 1 Shortest Path: {}, Player 2 Shortest Path: {}".format(dist1, dist2))
+
+
             self.print_board()
             # if is_shown:
             #     self.graphic(self.board, p1, p2)
