@@ -337,10 +337,10 @@ class Quoridor(object):
         VERTICAL = -1
 
         valid = []
-        opponent_north = location == opponent_loc - 5
-        opponent_south = location == opponent_loc + 5
-        opponent_east = location == opponent_loc - 1
-        opponent_west = location == opponent_loc + 1
+        opponent_north = (location == opponent_loc - 5)
+        opponent_south = (location == opponent_loc + 5)
+        opponent_east = (location == opponent_loc - 1)
+        opponent_west = (location == opponent_loc + 1)
 
         current_row = location // self.N_ROWS
 
@@ -357,6 +357,7 @@ class Quoridor(object):
             n_intersections = self._get_intersections(walls, opponent_loc)
             if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL:  # or (current_row == 3 and player == 1):
                 valid.append(self._DIRECTIONS['NN'])
+
             if n_intersections['NE'] != VERTICAL and intersections['NE'] != VERTICAL:
                 valid.append(self._DIRECTIONS['NE'])
 
@@ -589,19 +590,21 @@ class Quoridor(object):
     def _bfs_to_goal2(self, intersections, target_row, player_position, opponent_position, player=1):
         visited = [player_position]
         invalid_rows = [5, -1]
-        visit_queue = deque()
-        visit_queue.append(player_position)
+        visit_queue = Queue()
+        visit_queue.put(player_position)
         target_visited = False
 
         dist = 0
 
-        temp_queue = deque()
+        temp_queue = Queue()
 
         while not target_visited:
 
-            while not len(visit_queue) == 0:
-                current_position = visit_queue.popleft()
+            while not visit_queue.empty() :
+                current_position = visit_queue.get()
 
+                if current_position < 0 or current_position > 24:
+                    print("Strange position in the queue: ", current_position)
 
                 valid_directions = self._valid_pawn_actions(intersections,
                                                         location=current_position,
@@ -644,10 +647,11 @@ class Quoridor(object):
                     elif new_position not in visited:
                         visited.append(new_position)
                         if new_position > -1 and new_position < 25:
-                            temp_queue.append(new_position)
+                            temp_queue.put(new_position)
 
-            visit_queue = copy.deepcopy(temp_queue)
-            temp_queue.clear()
+            while not temp_queue.empty():
+                visit_queue.put(temp_queue.get())
+
             dist += 1
 
         return target_visited, dist
