@@ -198,7 +198,29 @@ class Quoridor(object):
             winner = 1
             game_over = True
         return game_over, winner
+<<<<<<< HEAD
     
+=======
+
+    # check that pawn moved to dead end
+    def is_dead_end(self, game):
+        current_player = self.get_current_player()
+
+
+    # 获取奖励
+    def _get_rewards(self):
+        done = True
+        if self._positions[2] < 5:
+            rewards, done = (1, -1)
+        elif self._positions[1] > 19:
+            rewards = (-1, 1)
+        else:
+            rewards = (0, 0)
+            done = False
+        return rewards, done
+
+    # 处理棋子动作
+>>>>>>> 9970c14113866f27c534b70dad189dfbf460b2c3
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
             self._positions[player] += 5

@@ -134,8 +134,8 @@ class MCTS(object):
         self._c_puct = c_puct
         self._n_playout = n_playout
 
-    # 修改 state -》 game
-    def _playout(self, game):
+    # Fix : get current_player param info when the first simulation started.
+    def _playout(self, game, current_player):
         """
         单次的蒙特卡洛搜索的模拟，即从根节点到叶节点一次，获得叶子节点价值然后反向传导，更新所有祖先节点
         """
@@ -154,10 +154,17 @@ class MCTS(object):
         end, winner = game.has_a_winner()
         # 没有结束，扩展节点，利用网络输出的先验概率
         if not end:
+            # Add an incompleted code to make pawn avoid dead-end section.
+            """
+            if np.sum(game.actions()[:4]) <= 1:
+                leaf_value = -1.0 if game.get_current_player == current_player else 1.0
+            else:
+            """
             node.expand(action_probs, game)
         # 结束了，返回真实的叶子结点值，不需要网络评估了。
         else:
-            leaf_value = 1.0 if winner == game.get_current_player() else -1.0
+            leaf_value = 1.0 if winner == current_player else -1.0  # Fix bug that all winners are current player
+            # print(leaf_value)
         # 迭代更新所有祖先节点
         # print("call update")
         node.update_recursive(leaf_value)
@@ -172,7 +179,7 @@ class MCTS(object):
             game_copy = copy.deepcopy(game)
             # state = game.state()
             # state_copy = copy.deepcopy(state)
-            self._playout(game_copy)
+            self._playout(game_copy, game_copy.get_current_player())
         # 根据访问次数计算落子概率
         act_visits = [(act, node._n_visits) for act, node in self._root._children.items()]
         acts, visits = zip(*act_visits)
