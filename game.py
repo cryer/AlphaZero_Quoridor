@@ -1,6 +1,6 @@
 import pygame
 from quoridor import Quoridor
-from agents.base import BaseAgent
+from agents.base import RandomAgent, RandomMoveAgent
 from agents.manual import ManualPygameAgent
 from mcts import MCTSPlayer as A_Player
 from pure_mcts import MCTSPlayer as B_Player
@@ -57,7 +57,8 @@ def main():
     MCTS_Alpha = A_Player(PolicyValueNet().policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
     MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 
 
-    random = BaseAgent()
+    random = RandomAgent()
+    randomMove = RandomMoveAgent()
     
 
     if args.player_type == 1:
@@ -72,7 +73,7 @@ def main():
         elif args.computer_type == 2:
             players = {1: human1, 2: MCTS_Pure}
         elif args.computer_type == 3:
-            players = {1: human1, 2: random}
+            players = {1: human1, 2: randomMove}
         elif args.computer_type == 0:
             print("Set computer type to 1 or 2 for choosing computer!")
             # pygame.quit()
@@ -153,13 +154,16 @@ def main():
 
         # 待改
         if player_types[game.current_player] == 'computer':
-            print("computer %s thinking..." % str(game.current_player))
+            print("Computer %s thinking..." % str(game.current_player))
             tic = time.time()
             # real_action = np.random.choice(valid_actions)
             real_action = players[game.current_player].choose_action(game)
+            
+            dist1, dist2 = game.get_shortest_path()
             # move_history.append(real_action)
+            print("Player 1's shortest path: {}, Player 2's shortest path is {}".format(dist1, dist2))
             toc = time.time()
-            print("MCTS choose action:", real_action, "  ,spend %s seconds" % str(toc - tic))
+            print("Computer's action:", real_action, ", spent %s seconds" % str(toc - tic))
             done, winner = game.step(real_action)
             # render(game, screen)
             # valid_actions = game.valid_actions

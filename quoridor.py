@@ -2,6 +2,10 @@ import numpy as np
 from queue import Queue
 import time
 
+from collections import deque
+
+import copy
+
 class Quoridor(object):
     HORIZONTAL = 1
     VERTICAL = -1
@@ -137,6 +141,24 @@ class Quoridor(object):
             # print(state.shape)
         return state
 
+
+    def get_shortest_path(self):
+
+        player1_target = 4
+        player2_target = 0
+
+        player1_position = self._positions[1]
+        player2_position = self._positions[2]
+
+        intersections = self._intersections
+
+
+        player1_valid, dist1 = self._bfs_to_goal2(intersections, player1_target, player1_position, player2_position, player=1)
+        player2_valid, dist2 = self._bfs_to_goal2(intersections, player2_target, player2_position, player1_position, player=2)
+
+        return dist1, dist2
+
+
     def actions(self):
         player = self.current_player
         location = self._positions[player]
@@ -215,6 +237,36 @@ class Quoridor(object):
             rewards = (0, 0)
             done = False
         return rewards, done
+
+
+    def _return_pawn_action(self, action, player):
+        if action == self._DIRECTIONS['N']:
+            return self._positions[player] + 5
+        elif action == self._DIRECTIONS['S']:
+            return self._positions[player] - 5
+        elif action == self._DIRECTIONS['E']:
+            return self._positions[player] + 1
+        elif action == self._DIRECTIONS['W']:
+            return self._positions[player] - 1
+        elif action == self._DIRECTIONS['NN']:
+            return self._positions[player] + 10
+        elif action == self._DIRECTIONS['SS']:
+            return self._positions[player] - 10
+        elif action == self._DIRECTIONS['EE']:
+            return self._positions[player] + 2
+        elif action == self._DIRECTIONS['WW']:
+            return self._positions[player] - 2
+        elif action == self._DIRECTIONS['NW']:
+            return self._positions[player] + 4
+        elif action == self._DIRECTIONS['NE']:
+            return self._positions[player] + 6
+        elif action == self._DIRECTIONS['SW']:
+            return self._positions[player] - 6
+        elif action == self._DIRECTIONS['SE']:
+            return self._positions[player] - 4
+        else:
+            raise ValueError("Invalid Pawn Action: {action}".format(action=action))
+
 
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
@@ -463,8 +515,8 @@ class Quoridor(object):
         intersections[wall_location] = orientation
 
         # BFS to target row
-        player1_valid = self._bfs_to_goal(intersections, player1_target, player1_position, player2_position, player=1)
-        player2_valid = self._bfs_to_goal(intersections, player2_target, player2_position, player1_position, player=2)
+        player1_valid, _ = self._bfs_to_goal(intersections, player1_target, player1_position, player2_position, player=1)
+        player2_valid, _ = self._bfs_to_goal(intersections, player2_target, player2_position, player1_position, player=2)
 
         return not (player1_valid and player2_valid)
 
@@ -475,12 +527,17 @@ class Quoridor(object):
         visit_queue.put(player_position)
         target_visited = False
 
+        dist = 0
+
         while not target_visited and not visit_queue.empty():
             current_position = visit_queue.get()
             valid_directions = self._valid_pawn_actions(intersections,
                                                         location=current_position,
                                                         opponent_loc=opponent_position,
                                                         player=player)
+
+            dist += 1
+
             for direction in valid_directions:
                 if direction == self._DIRECTIONS['N']:
                     new_position = current_position + 5
@@ -509,6 +566,7 @@ class Quoridor(object):
                 else:
                     raise ValueError('Invalid direction - should never happen')
 
+
                 new_row = new_position // self.N_ROWS
                 if new_row == target_row:
                     target_visited = True
@@ -517,7 +575,74 @@ class Quoridor(object):
                     if new_row not in invalid_rows:
                         visit_queue.put(new_position)
 
-        return target_visited
+
+        return target_visited, dist
+
+    def _bfs_to_goal2(self, intersections, target_row, player_position, opponent_position, player=1):
+        visited = [player_position]
+        invalid_rows = [5, -1]
+        visit_queue = deque()
+        visit_queue.append(player_position)
+        target_visited = False
+
+        dist = 0
+
+        temp_queue = deque()
+
+        while not target_visited:
+
+            while not len(visit_queue) == 0:
+                current_position = visit_queue.popleft()
+                valid_directions = self._valid_pawn_actions(intersections,
+                                                        location=current_position,
+                                                        opponent_loc=opponent_position,
+                                                        player=player)
+
+
+                for direction in valid_directions:
+                    if direction == self._DIRECTIONS['N']:
+                        new_position = current_position + 5
+                    elif direction == self._DIRECTIONS['S']:
+                        new_position = current_position - 5
+                    elif direction == self._DIRECTIONS['E']:
+                        new_position = current_position + 1
+                    elif direction == self._DIRECTIONS['W']:
+                        new_position = current_position - 1
+                    elif direction == self._DIRECTIONS['NN']:
+                        new_position = current_position + 10
+                    elif direction == self._DIRECTIONS['SS']:
+                        new_position = current_position - 10
+                    elif direction == self._DIRECTIONS['EE']:
+                        new_position = current_position + 2
+                    elif direction == self._DIRECTIONS['WW']:
+                        new_position = current_position - 2
+                    elif direction == self._DIRECTIONS['NE']:
+                        new_position = current_position + 6
+                    elif direction == self._DIRECTIONS['NW']:
+                        new_position = current_position + 4
+                    elif direction == self._DIRECTIONS['SW']:
+                        new_position = current_position - 6
+                    elif direction == self._DIRECTIONS['SE']:
+                        new_position = current_position - 4
+                    else:
+                        raise ValueError('Invalid direction - should never happen')
+
+
+                    new_row = new_position // self.N_ROWS
+                    if new_row == target_row:
+                        target_visited = True
+                    elif new_position not in visited:
+                        visited.append(new_position)
+                        if new_row not in invalid_rows:
+                            temp_queue.append(new_position)
+
+            visit_queue = copy.deepcopy(temp_queue)
+            temp_queue.clear()
+            dist += 1
+
+        return target_visited, dist
+
+
 
     def add_wall(self, wall, orientation):
         self._intersections[wall] = orientation
