@@ -7,7 +7,6 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 def set_learning_rate(optimizer, lr):
-    """设置学习率"""
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
@@ -60,13 +59,11 @@ class policy_value_net(nn.Module):
         self.res3 = block(planes, planes)
         self.res4 = block(planes, planes)
         self.res5 = block(planes, planes)
-        # 价值头
         self.conv2 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(2)
         self.fc1 = nn.Linear(50, 32)
         self.fc2 = nn.Linear(32, 1)
-        # 策略头
         self.conv3 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
@@ -82,19 +79,17 @@ class policy_value_net(nn.Module):
         out = self.res3(out)
         out = self.res4(out)
         out = self.res5(out)
-        # 价值头
         value_out = self.conv2(out)
         value_out = self.bn2(value_out)
         value_out = self.relu(value_out)
         value_out = value_out.view(-1, 50)
         value_out = self.fc1(value_out)
         value_out = F.tanh(self.fc2(value_out))
-        # 策略头
         policy_out = self.conv3(out)
         policy_out = self.bn3(policy_out)
         policy_out = self.relu(policy_out)
         policy_out = policy_out.view(-1, 50)
-        # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4 支持dim
+        # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4
         policy_out = F.log_softmax(self.fc3(policy_out))
 
         return policy_out,value_out
@@ -109,10 +104,9 @@ class policy_value_net(nn.Module):
 
 
 class PolicyValueNet(object):
-    """策略价值网络 """
     def __init__(self,model_file=None, use_gpu=True):
         self.use_gpu = use_gpu
-        self.l2_const = 1e-4  # 正则化系数
+        self.l2_const = 1e-4  # 
         if self.use_gpu:
             # device = torch.device("cuda:0")
             self.policy_value_net = policy_value_net(BasicBlock,12,16).cuda()
@@ -127,8 +121,6 @@ class PolicyValueNet(object):
 
     def policy_value(self, state_batch):
         """
-        输入：一批次的状态
-        输出：一批次的落子概率和状态价值
         """
         if self.use_gpu:
             # device = torch.device("cuda:0")
@@ -145,10 +137,8 @@ class PolicyValueNet(object):
 
     def policy_value_fn(self, game):
         """
-        输入：棋盘
-        输出：一个列表，由每一个可用落子的(action, probability)和棋盘状态价值组成
         """
-        legal_positions = game.actions()  # 策略价值网络输出的是所有的落子概率，所以你需要剔除已落子的位置
+        legal_positions = game.actions()  # 
         current_state = np.ascontiguousarray(game.state()).reshape([1,12,5,5])
         if self.use_gpu:
             # device = torch.device("cuda:0")
@@ -179,7 +169,7 @@ class PolicyValueNet(object):
         self.optimizer.zero_grad()
         set_learning_rate(self.optimizer, lr)
 
-        # 向前传播
+        # 
         log_act_probs, value = self.policy_value_net(state_batch)
         
         value_loss = F.mse_loss(value.view(-1), winner_batch)
@@ -188,10 +178,10 @@ class PolicyValueNet(object):
         policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))        
 
         loss = value_loss + policy_loss
-        # 反向传播，优化损失
+        # 
         loss.backward()
         self.optimizer.step()
-        # 计算熵，只是用于监控
+        #
         entropy = -torch.mean(torch.sum(torch.exp(log_act_probs) * log_act_probs, 1))
         return value_loss.data, policy_loss.data, entropy.data  # Change code for newest PyTorch version
 
@@ -200,7 +190,6 @@ class PolicyValueNet(object):
         return net_params
 
     def save_model(self, model_file):
-        """ 保存模型"""
         torch.save(self.policy_value_net.state_dict(), 'ckpt/%s.pth'%(model_file))
 
 

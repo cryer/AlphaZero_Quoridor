@@ -11,7 +11,7 @@ class Quoridor(object):
 
         self.action_space = 44  # 12 + 32 actions in total (5x5 Quoridor)
         self.n_players = 2
-        self.players = [1, 2]  # 两个玩家
+        self.players = [1, 2]  #
         self.reset()
 
     # load player's info (human or computer)
@@ -143,16 +143,16 @@ class Quoridor(object):
 
         opponent = 1 if player == 2 else 2
         opponent_loc = self._positions[opponent]
-        walls = self._intersections  # 长64一维数组
-        # 获得合法棋子动作空间
+        walls = self._intersections  # 
+        # 
         pawn_actions = self._valid_pawn_actions(location=location,
                                                 opponent_loc=opponent_loc, walls=walls, player=player)
-        # 如果当前为玩家1并且还有挡板，或者玩家为2，并且还有挡板，则获取挡板的合法动作空间
+        # 
         if ((self.current_player == 1 and self._player1_walls_remaining > 0)
             or (self.current_player == 2 and self._player2_walls_remaining > 0)):
-            wall_actions = self._valid_wall_actions()  # 获得合法挡板动作空间
+            wall_actions = self._valid_wall_actions()  # 
 
-            # 调整+12   因为前12个是棋子动作 4+8
+            # 
             wall_actions = [action + 12 for action in wall_actions]
         else:
             wall_actions = []
@@ -163,7 +163,7 @@ class Quoridor(object):
         # self._logger.info("Player {player} chooses action {action}".format(player=self.current_player, action=action))
         player = self.current_player
         done = False
-        # 添加
+        # 
         self.valid_actions = self.actions()
 
         if self.safe:
@@ -180,14 +180,14 @@ class Quoridor(object):
             #  print("game over !winner is player" + str(winner))
             done = True
         else:
-            self.rotate_players()  # 切换玩家
-            # observation = self.get_state  # get_state未实现
+            self.rotate_players()  #
+            # observation = self.get_state  # get_state
             # observation = self.state()
             # print("game over !winner is player" + str(winner))
 
         return done, winner
 
-    # 判断是否有胜者
+    # 
     def has_a_winner(self):
         game_over = False
         winner = None
@@ -198,16 +198,13 @@ class Quoridor(object):
             winner = 1
             game_over = True
         return game_over, winner
-<<<<<<< HEAD
     
-=======
 
     # check that pawn moved to dead end
     def is_dead_end(self, game):
         current_player = self.get_current_player()
 
 
-    # 获取奖励
     def _get_rewards(self):
         done = True
         if self._positions[2] < 5:
@@ -219,8 +216,6 @@ class Quoridor(object):
             done = False
         return rewards, done
 
-    # 处理棋子动作
->>>>>>> 9970c14113866f27c534b70dad189dfbf460b2c3
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
             self._positions[player] += 5
@@ -249,7 +244,6 @@ class Quoridor(object):
         else:
             raise ValueError("Invalid Pawn Action: {action}".format(action=action))
 
-    # 处理挡板动作
     def _handle_wall_action(self, action):
         # Action values less than 16 are horizontal walls
         if action < 16:
@@ -275,13 +269,11 @@ class Quoridor(object):
             self.current_player = 1
             self.last_player = 2
 
-    # walls ：长64一维数组 location：int 0-24
     def _valid_pawn_actions(self, walls, location, opponent_loc, player=1):
         HORIZONTAL = 1
         VERTICAL = -1
 
         valid = []
-        # 判断对面棋子是否相邻
         opponent_north = location == opponent_loc - 5
         opponent_south = location == opponent_loc + 5
         opponent_east = location == opponent_loc - 1
@@ -290,29 +282,18 @@ class Quoridor(object):
         current_row = location // self.N_ROWS
 
         intersections = self._get_intersections(walls, location)
-        # 判断北面没有水平挡板和对面棋子
         n = intersections['NW'] != HORIZONTAL and intersections['NE'] != HORIZONTAL and not opponent_north
-        # 判断南面没有水平挡板和对面棋子
         s = intersections['SW'] != HORIZONTAL and intersections['SE'] != HORIZONTAL and not opponent_south
-        # 判断东面没有竖直挡板和对面棋子
         e = intersections['NE'] != VERTICAL and intersections['SE'] != VERTICAL and not opponent_east
-        # 判断西面没有竖直挡板和对面棋子
         w = intersections['NW'] != VERTICAL and intersections['SW'] != VERTICAL and not opponent_west
-        # 向北走，两种情况：1，按照上面的判断可走 2，虽到边界但是再走可以获胜
         if n or (player == 1 and current_row == 4): valid.append(self._DIRECTIONS['N'])
-        # 同理
         if s or (player == 2 and current_row == 0): valid.append(self._DIRECTIONS['S'])
         if e: valid.append(self._DIRECTIONS['E'])
         if w: valid.append(self._DIRECTIONS['W'])
-        # 如果北面有对手棋子并且北面没有水平挡板
         if opponent_north and intersections['NE'] != HORIZONTAL and intersections['NW'] != HORIZONTAL:
-            # 获取对手周围的挡板信息
             n_intersections = self._get_intersections(walls, opponent_loc)
-            # 如果对手北面没有水平挡板，或者 玩家1在第八行，也就是倒数第二行
             if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL:  # or (current_row == 3 and player == 1):
-                # 可以走向北两步，也就是NN
                 valid.append(self._DIRECTIONS['NN'])
-            # 如果对手东-北面没有竖直挡板，并且自己东-北面没有竖直挡板，可以走两步NE
             if n_intersections['NE'] != VERTICAL and intersections['NE'] != VERTICAL:
                 valid.append(self._DIRECTIONS['NE'])
 
@@ -361,11 +342,9 @@ class Quoridor(object):
 
         return valid
 
-    # intersections： 一维数组 长64   current_tile：当前位置，int 0-80
     def _get_intersections(self, intersections, current_tile):
         """Gets the four intersections for a given tile."""
         location_row = current_tile // self.N_ROWS
-        # 判断棋子是否在四周边界
         n_border = current_tile > 19
         e_border = current_tile % 5 == 4
         s_border = current_tile < 5
@@ -618,41 +597,39 @@ class Quoridor(object):
 
     def clone(self):
         return Quoridor()
-    # 自博弈一次
+    
     def start_self_play(self, player, is_shown=0, temp=1e-3):
         """
-         开始自博弈，也就是蒙特卡洛树搜索和蒙特卡洛树搜索之间的对抗。
-         主要是为了产生数据集，训练神经网络，保存的数据形式：(state, mcts_probs, z)
         """
-        self.reset()     # 初始化棋盘
+        self.reset()     #
         p1, p2 = self.players
-        states, mcts_probs, current_players = [], [], []       # 初始化需要保存的信息，胜负情况要在模拟结束时保存
+        states, mcts_probs, current_players = [], [], []       # 
 
-        while(1):   # 循环进行自博弈
-            # 待修改
+        while(1):   # 
+            # 
             tic = time.time()
-            move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  # 获取落子以及概率
+            move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  #
             toc = time.time()
             print('[Move probs]\n', move_probs[:12])
             print('[Wall probs]\n', move_probs[12:])
             print("player %s  chosed move : %s ,prob: %.3f  spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
-            # 保存数据
+            # 
             states.append(self.state())
             mcts_probs.append(move_probs)
             current_players.append(self.current_player)
-            # 进行落子
+            # 
             self.step(move)
             self.print_board()
             # if is_shown:
             #     self.graphic(self.board, p1, p2)
             end, winner = self.has_a_winner()
             if end:
-                # 判断游戏是否结束 ，始终以当前玩家视角保存数据
+                # 
                 winners_z = np.zeros(len(current_players))
                 if winner != -1:
-                    winners_z[np.array(current_players) == winner] = 1.0        # 当前玩家的所有落子的z都设为1
-                    winners_z[np.array(current_players) != winner] = -1.0       # 对手玩家的所有落子的z都设为-1
-                # 重置MCTS节点
+                    winners_z[np.array(current_players) == winner] = 1.0        # 
+                    winners_z[np.array(current_players) != winner] = -1.0       # 
+                # 
                 player.reset_player()
                 if is_shown:
                     if winner != -1:
