@@ -197,7 +197,7 @@ class Quoridor(object):
         else:
             self._handle_wall_action(action - 12)
 
-        game_over, winner = self.has_a_winner_smarter()
+        game_over, winner = self.has_a_winner()
         if game_over:
             #  print("game over !winner is player" + str(winner))
             done = True
@@ -588,7 +588,7 @@ class Quoridor(object):
         return target_visited
 
     def _bfs_to_goal2(self, intersections, target_row, player_position, opponent_position, player=1):
-        visited = [player_position]
+        visited = []
         invalid_rows = [5, -1]
         visit_queue = Queue()
         visit_queue.put(player_position)
@@ -646,11 +646,15 @@ class Quoridor(object):
                         return True, dist + 1
                     elif new_position not in visited:
                         visited.append(new_position)
-                        if new_position > -1 and new_position < 25:
+                        if new_position > -1 and new_position < 25:                                   
                             temp_queue.put(new_position)
 
             while not temp_queue.empty():
-                visit_queue.put(temp_queue.get())
+                position = temp_queue.get()
+                if position < 0 or position > 24:
+                    continue
+                else:
+                    visit_queue.put(position)
 
             dist += 1
 
@@ -761,7 +765,7 @@ class Quoridor(object):
             self.print_board()
             # if is_shown:
             #     self.graphic(self.board, p1, p2)
-            end, winner = self.has_a_winner_smarter()
+            end, winner = self.has_a_winner()
             if end:
                 # 
                 winners_z = np.zeros(len(current_players))
