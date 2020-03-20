@@ -54,7 +54,7 @@ def main():
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet().policy_value_fn, c_puct=5, n_playout=30, is_selfplay=0)
+    MCTS_Alpha = A_Player(PolicyValueNet("current_policy_generation_200_1.199_2020-03-19").policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
     MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 50层400秒
 
     if args.player_type == 1:

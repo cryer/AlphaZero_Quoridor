@@ -184,7 +184,7 @@ class PolicyValueNet(object):
         
         value_loss = F.mse_loss(value.view(-1), winner_batch)
 
-        print(mcts_probs.shape, log_act_probs.shape)
+        # print(mcts_probs.shape, log_act_probs.shape)
         policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))        
 
         loss = value_loss + policy_loss

@@ -137,11 +137,6 @@ class Quoridor(object):
             # print(state.shape)
         return state
 
-    def load_state(self, state):
-        """Mutates the Quoridor object to match a given state"""
-        current_player = state[-1] == np.zeros([5, 5])
-        # TODO: Implement the rest of this
-
     def actions(self):
         player = self.current_player
         location = self._positions[player]
@@ -192,10 +187,6 @@ class Quoridor(object):
 
         return done, winner
 
-    # 判断游戏是否结束
-    def game_end(self):
-        pass
-
     # 判断是否有胜者
     def has_a_winner(self):
         game_over = False
@@ -207,20 +198,7 @@ class Quoridor(object):
             winner = 1
             game_over = True
         return game_over, winner
-
-    # 获取奖励
-    def _get_rewards(self):
-        done = True
-        if self._positions[2] < 5:
-            rewards, done = (1, -1)
-        elif self._positions[1] > 19:
-            rewards = (-1, 1)
-        else:
-            rewards = (0, 0)
-            done = False
-        return rewards, done
-
-    # 处理棋子动作
+    
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
             self._positions[player] += 5
