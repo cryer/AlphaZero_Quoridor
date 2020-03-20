@@ -53,7 +53,7 @@ python train.py
 
 # To do list
 
-- [x] Implement a smarter winning checker function. :blushed:
+- [x] Implement a smarter winning checker function. 
 - [ ] Implement a greedy Quoridor agent.
 - [ ] Write an evaluation code by playing against various types of Quoridor agents.
 - [ ] Parallelize MCTS simulation.
