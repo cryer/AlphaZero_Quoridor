@@ -157,8 +157,8 @@ class Quoridor(object):
         intersections = self._intersections
 
 
-        player1_valid, dist1 = self._bfs_to_goal2(intersections, player1_target, player1_position, player2_position, player=1)
-        player2_valid, dist2 = self._bfs_to_goal2(intersections, player2_target, player2_position, player1_position, player=2)
+        player1_valid, dist1 = self._bfs_to_goal2(intersections, player1_target, player1_position, player1_position, player=1)
+        player2_valid, dist2 = self._bfs_to_goal2(intersections, player2_target, player2_position, player2_position, player=2)
 
         return dist1, dist2
 
@@ -229,6 +229,13 @@ class Quoridor(object):
         game_over = False
         winner = None
         dist1, dist2 = self.get_shortest_path()
+
+        if self._positions[2] > 19:
+            winner = 2
+            game_over = True
+        elif self._positions[1] < 5:
+            winner = 1
+            game_over = True
 
         if abs(dist1 - dist2) > 1 and self._player1_walls_remaining == 0 and self._player2_walls_remaining == 0:
             winner = 2 if dist1 > dist2 else 1
@@ -596,7 +603,7 @@ class Quoridor(object):
 
         temp_queue = Queue()
 
-        while not target_visited:
+        while not target_visited and not visit_queue.empty():
 
             while not visit_queue.empty() :
                 current_position = visit_queue.get()
@@ -638,14 +645,12 @@ class Quoridor(object):
                     else:
                         raise ValueError('Invalid direction - should never happen')
 
-
                     new_row = new_position // self.N_ROWS
                     if new_row == target_row:
                         return True, dist + 1
                     elif new_position not in visited:
                         visited.append(new_position)
-                        if new_position > -1 and new_position < 25:                                   
-                            temp_queue.put(new_position)
+                        temp_queue.put(new_position)
 
             while not temp_queue.empty():
                 position = temp_queue.get()
