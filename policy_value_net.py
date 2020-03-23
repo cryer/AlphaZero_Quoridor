@@ -6,6 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
+from constant import BOARD_SIZE, WALL_NUM
+
 def set_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -59,15 +61,20 @@ class policy_value_net(nn.Module):
         self.res3 = block(planes, planes)
         self.res4 = block(planes, planes)
         self.res5 = block(planes, planes)
-        self.conv2 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
+
+        # value head
+        self.conv2 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(2)
-        self.fc1 = nn.Linear(50, 32)
-        self.fc2 = nn.Linear(32, 1)
-        self.conv3 = nn.Conv2d(16, 2, kernel_size=3, stride=stride,
+        self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, BOARD_SIZE ** 2)
+        self.fc2 = nn.Linear(BOARD_SIZE ** 2, 1)
+
+
+        # policy head
+        self.conv3 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc3 = nn.Linear(50, 44)
+        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2+ 12)
 
 
     def forward(self,x):
@@ -79,18 +86,22 @@ class policy_value_net(nn.Module):
         out = self.res3(out)
         out = self.res4(out)
         out = self.res5(out)
+
+        # value head
         value_out = self.conv2(out)
         value_out = self.bn2(value_out)
         value_out = self.relu(value_out)
-        value_out = value_out.view(-1, 50)
+        value_out = value_out.view(value_out.size(0), -1)
         value_out = self.fc1(value_out)
         value_out = F.tanh(self.fc2(value_out))
+
+        # policy head
         policy_out = self.conv3(out)
         policy_out = self.bn3(policy_out)
         policy_out = self.relu(policy_out)
-        policy_out = policy_out.view(-1, 50)
+        policy_out = policy_out.view(policy_out.size(0), -1)
         # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4
-        policy_out = F.log_softmax(self.fc3(policy_out))
+        policy_out = F.log_softmax(self.fc3(policy_out), dim = 1)
 
         return policy_out,value_out
 
@@ -109,10 +120,10 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # 
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock,12,16).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),128).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock,12,16)
+            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),128)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 
@@ -139,7 +150,7 @@ class PolicyValueNet(object):
         """
         """
         legal_positions = game.actions()  # 
-        current_state = np.ascontiguousarray(game.state()).reshape([1,12,5,5])
+        current_state = np.ascontiguousarray(game.state()).reshape([1, 6 + (WALL_NUM * 2), BOARD_SIZE, BOARD_SIZE])
         if self.use_gpu:
             # device = torch.device("cuda:0")
             log_act_probs, value = self.policy_value_net(Variable(torch.from_numpy(current_state)).cuda().float())
@@ -150,6 +161,7 @@ class PolicyValueNet(object):
             act_probs = np.exp(log_act_probs.data.numpy().flatten())
         # print("legal:",legal_positions)
         # print("probs:", act_probs)
+
         act_probs = zip(legal_positions, act_probs[legal_positions])
         value = value.item()
         return act_probs, value

@@ -10,8 +10,11 @@ from policy_value_net import PolicyValueNet
 
 from mcts import MCTSPlayer
 
-
 from torch.utils.tensorboard import SummaryWriter
+
+
+from constant import BOARD_SIZE, WALL_NUM
+
 
 writer = SummaryWriter()
 
@@ -34,8 +37,6 @@ class TrainPipeline(object):
         self.kl_targ = 0.02
         self.check_freq = 5
         self.game_batch_num = 1000
-        
-        self.check_freq = 20
         self.game_batch_num = 200
         
         self.best_win_ratio = 0.0

@@ -32,13 +32,8 @@ class TrainPipeline(object):
         self.play_batch_size = 1
         self.epochs = 50
         self.kl_targ = 0.02
-<<<<<<< HEAD:train_sk.py
         self.check_freq = 5
-        self.game_batch_num = 1000
-=======
-        self.check_freq = 20
-        self.game_batch_num = 200
->>>>>>> 9970c14113866f27c534b70dad189dfbf460b2c3:train.py
+        self.game_batch_num = 2000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
         if init_model:
@@ -126,16 +121,12 @@ class TrainPipeline(object):
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
                     # Add generation to filename
-<<<<<<< HEAD:train_sk.py
-                    self.policy_value_net.save_model('current_policy_generation_' + str(count) + '_' + str("%0.3f_" % (valloss.item()+polloss.item())) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
-=======
-                    self.policy_value_net.save_model('cp_gen_3_' + str(count) + '_' + str("%0.3f_" % valloss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
->>>>>>> 9970c14113866f27c534b70dad189dfbf460b2c3:train.py
+                    self.policy_value_net.save_model('policymodel_' + str(count) + '_' + str("%0.3f_" % (valloss.item()+polloss.item())) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 
 
 # Start
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline(init_model='current_policy_generation_200_1.199_2020-03-19')
+    training_pipeline = TrainPipeline(init_model=None)
     training_pipeline.run()

@@ -1,0 +1,3 @@
+BOARD_SIZE = 5
+WALL_NUM = 3
+
