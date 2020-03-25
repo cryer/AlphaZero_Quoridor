@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from constant import BOARD_SIZE, WALL_NUM
+from constant import *
 
 def set_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -56,11 +56,13 @@ class policy_value_net(nn.Module):
                                padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.res1 = block(planes, planes)
-        self.res2 = block(planes, planes)
-        self.res3 = block(planes, planes)
-        self.res4 = block(planes, planes)
-        self.res5 = block(planes, planes)
+
+        blocks = []
+
+        for i in range(NUM_BLOCK):
+            blocks.append(block(planes, planes))
+
+        self.layers = nn.Sequential(*blocks)
 
         # value head
         self.conv2 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
@@ -81,11 +83,7 @@ class policy_value_net(nn.Module):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
-        out = self.res1(out)
-        out = self.res2(out)
-        out = self.res3(out)
-        out = self.res4(out)
-        out = self.res5(out)
+        out = self.layers(out)
 
         # value head
         value_out = self.conv2(out)
@@ -120,10 +118,10 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # 
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),128).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),NN_DIM).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),128)
+            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),NN_DIM)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 

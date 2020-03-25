@@ -10,6 +10,8 @@ import numpy as np
 import time
 import argparse
 
+from constant import *
+
 # Define Colors
 BLACK = (0, 0, 0)
 WHITE = (240, 255, 240)
@@ -54,7 +56,7 @@ def main():
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet('policymodel_316_1.792_2020-03-23').policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
+    MCTS_Alpha = A_Player(PolicyValueNet('policymodel_400_1.541_2020-03-25').policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
     MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 
 
     random = RandomAgent()
@@ -233,7 +235,7 @@ def draw_game(game, screen, valid_actions):
                 )
                 pawn_moves.append([rect, action_tiles[row * BOARD_SIZE + column]])
             else:
-                if row * BOARD_SZIE + column == game._positions[1]:
+                if row * BOARD_SIZE + column == game._positions[1]:
                     color = BLUE
                 elif row * BOARD_SIZE + column == game._positions[2]:
                     color = RED
