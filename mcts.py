@@ -188,9 +188,9 @@ class MCTS(object):
         act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
 
         q_vals = [node._Q for act, node in self._root._children.items()]
-        print("-" * 30)
-        print("q_vals : ", q_vals)
-        print("-" * 30)
+        # print("-" * 30)
+        # print("q_vals : ", q_vals)
+        # print("-" * 30)
         return acts, act_probs
 
     def update_with_move(self, last_move, state):

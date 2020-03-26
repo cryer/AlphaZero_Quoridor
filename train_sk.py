@@ -36,6 +36,9 @@ class TrainPipeline(object):
         self.game_batch_num = 2000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
+
+        self.old_probs = 0
+
         if init_model:
             self.policy_value_net = PolicyValueNet(model_file=init_model)
         else:
@@ -48,11 +51,11 @@ class TrainPipeline(object):
 
         extend_data = []
         for state, mcts_prob, winner in play_data:
-            print(state.shape)
-            print(mcts_prob.shape, winner)
+
+
+            ## horizontally flipped game
 
             wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
-            print(wall_state.shape, wall_state)
             flipped_wall_state = []
            
             for i in range(3):
@@ -62,7 +65,6 @@ class TrainPipeline(object):
 
             flipped_wall_state = np.array(flipped_wall_state)
 
-            print(flipped_wall_state.shape) 
              
 
             player_position = state[3:5, :,:]
@@ -87,8 +89,8 @@ class TrainPipeline(object):
             h_equi_mcts_prob[2] = mcts_prob[3]
             h_equi_mcts_prob[3] = mcts_prob[2]
            
-            h_wall_actions = mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
-            v_wall_actions = mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
+            h_wall_actions = h_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
+            v_wall_actions = h_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
             
             flipped_h_wall_actions = np.fliplr(h_wall_actions)
             flipped_v_wall_actions = np.fliplr(v_wall_actions)
@@ -96,13 +98,110 @@ class TrainPipeline(object):
             h_equi_mcts_prob[12:] = np.hstack([flipped_h_wall_actions.flatten(), flipped_v_wall_actions.flatten()])
 
 
+            ## Vertically flipped game
+
+            flipped_wall_state = []
+           
+            for i in range(3):
+                wall_padded = np.flipud(wall_state[i])
+                wall_padded = np.pad(wall_padded, (0,1), mode='constant', constant_values=0)
+                flipped_wall_state.append(wall_padded)
+
+            flipped_wall_state = np.array(flipped_wall_state)
+
+
+
+            flipped_player_position = []
+            for i in range(2):
+                flipped_player_position.append(np.flipud(player_position[1-i]))
+
+            flipped_player_position = np.array(flipped_player_position)
+
+            cur_player = (np.zeros((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+
+            v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:10, :,:], state[5:7,:,:], cur_player])
+
+
+
+            v_equi_mcts_prob = np.copy(mcts_prob)
+
+            v_equi_mcts_prob[4] = mcts_prob[5]
+            v_equi_mcts_prob[9] = mcts_prob[11]
+            v_equi_mcts_prob[11] = mcts_prob[9]
+            v_equi_mcts_prob[8] = mcts_prob[10]
+            v_equi_mcts_prob[10] = mcts_prob[8]
+            v_equi_mcts_prob[5] = mcts_prob[4]
+            v_equi_mcts_prob[0] = mcts_prob[1]
+            v_equi_mcts_prob[1] = mcts_prob[0]
+           
+            h_wall_actions = v_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
+            v_wall_actions = v_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
+            
+            flipped_h_wall_actions = np.flipud(h_wall_actions)
+            flipped_v_wall_actions = np.flipud(v_wall_actions)
+
+            v_equi_mcts_prob[12:] = np.hstack([flipped_h_wall_actions.flatten(), flipped_v_wall_actions.flatten()])
+
+
+
+
+            ## Horizontally-vertically flipped game
+
+            wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
+            flipped_wall_state = []
+           
+            for i in range(3):
+                wall_padded = np.fliplr(np.flipud(wall_state[i]))
+                wall_padded = np.pad(wall_padded, (0,1), mode='constant', constant_values=0)
+                flipped_wall_state.append(wall_padded)
+
+            flipped_wall_state = np.array(flipped_wall_state)
+
+
+
+            flipped_player_position = []
+            for i in range(2):
+                flipped_player_position.append(np.fliplr(np.flipud(player_position[1-i])))
+
+            flipped_player_position = np.array(flipped_player_position)
+
+            cur_player = (np.zeros((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+
+            hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:10, :,:], state[5:7,:,:], cur_player])
+
+
+
+            hv_equi_mcts_prob = np.copy(mcts_prob)
+
+            hv_equi_mcts_prob[4] = mcts_prob[5]
+            hv_equi_mcts_prob[9] = mcts_prob[10]
+            hv_equi_mcts_prob[10] = mcts_prob[9]
+            hv_equi_mcts_prob[8] = mcts_prob[11]
+            hv_equi_mcts_prob[11] = mcts_prob[8]
+            hv_equi_mcts_prob[5] = mcts_prob[4]
+            hv_equi_mcts_prob[0] = mcts_prob[1]
+            hv_equi_mcts_prob[1] = mcts_prob[0]
+           
+            h_wall_actions = hv_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
+            v_wall_actions = hv_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
+            
+            flipped_h_wall_actions = np.fliplr(np.flipud(h_wall_actions))
+            flipped_v_wall_actions = np.fliplr(np.flipud(v_wall_actions))
+
+            hv_equi_mcts_prob[12:] = np.hstack([flipped_h_wall_actions.flatten(), flipped_v_wall_actions.flatten()])
+
+
+
+            ###########
+
             extend_data.append((state, mcts_prob, winner))
             extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
+            extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
+            extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
 
         return extend_data
 
     def collect_selfplay_data(self, n_games=1):
-        """收集训练数据"""
         for i in range(n_games):
             winner, play_data = self.game.start_self_play(self.mcts_player, temp=self.temp)  # 进行自博弈
             play_data = list(play_data)[:]
@@ -112,12 +211,11 @@ class TrainPipeline(object):
         
 
             self.data_buffer.extend(play_data)
+            print("{}th game finished. Current episode length: {}, Length of data buffer: {}".format(i, self.episode_len, len(self.data_buffer)))
 
     def policy_update(self):
-        old_probs, old_v = self.policy_value_net.policy_value(state_batch)  
 
         dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
-
 
 
         for i in range(NUM_EPOCHS):
@@ -125,21 +223,20 @@ class TrainPipeline(object):
                 valloss, polloss, entropy = self.policy_value_net.train_step(state, mcts_prob, winner, self.learn_rate * self.lr_multiplier)
                 new_probs, new_v = self.policy_value_net.policy_value(state_batch)  
 
-            kl = np.mean(np.sum(old_probs * (np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
-            if kl > self.kl_targ * 4:  
-                break
+            #kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
+            #if kl > self.kl_targ * 4:  
+            #    break
         
-            if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
-                self.lr_multiplier /= 1.5
-            elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
-                self.lr_multiplier *= 1.5
+            #if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
+            #    self.lr_multiplier /= 1.5
+            #elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
+            #    self.lr_multiplier *= 1.5
 
 
-        explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
-        explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
-        print(
-            "kl:{:.5f},lr_multiplier:{:.3f},value loss:{},policy loss:[],entropy:{},explained_var_old:{:.3f},explained_var_new:{:.3f}".format(
-                kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
+        #explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
+        #explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
+        #print( "kl:{:.5f}, lr_multiplier:{:.3f}, value loss:{}, policy loss:[], entropy:{}".format(
+        #        kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
         return valloss, polloss, entropy
 
 
