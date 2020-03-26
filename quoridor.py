@@ -745,8 +745,7 @@ class Quoridor(object):
         return Quoridor()
     
     def start_self_play(self, player, is_shown=0, temp=1e-3):
-        """
-        """
+        
         self.reset()     #
         p1, p2 = self.players
         states, mcts_probs, current_players = [], [], []       # 
