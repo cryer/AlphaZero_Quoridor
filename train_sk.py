@@ -16,8 +16,9 @@ from torch.utils.data import DataLoader
 
 from constant import *
 
-writer = SummaryWriter()
+iter_count = 0
 
+writer = SummaryWriter()
 
 class TrainPipeline(object):
     def __init__(self, init_model=None):
@@ -221,7 +222,16 @@ class TrainPipeline(object):
         for i in range(NUM_EPOCHS):
             for i, (state, mcts_prob, winner) in enumerate(dataloader):
                 valloss, polloss, entropy = self.policy_value_net.train_step(state, mcts_prob, winner, self.learn_rate * self.lr_multiplier)
-                new_probs, new_v = self.policy_value_net.policy_value(state_batch)  
+                new_probs, new_v = self.policy_value_net.policy_value(state)
+
+                global iter_count 
+
+                writer.add_scalar("Val Loss/train", valloss.item(), iter_count)
+                writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
+                writer.add_scalar("Entory/train", entropy, iter_count)
+ 
+
+                iter_count += 1
 
             #kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
             #if kl > self.kl_targ * 4:  
@@ -241,8 +251,9 @@ class TrainPipeline(object):
 
 
     def run(self):
+
         try:
-            self.collect_selfplay_data(10)
+            self.collect_selfplay_data(5)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
@@ -251,9 +262,9 @@ class TrainPipeline(object):
                     valloss, polloss, entropy = self.policy_update()
                     print("VALUE LOSS: %0.3f " % valloss.item(), "POLICY LOSS: %0.3f " % polloss.item(), "ENTROPY:i %0.3f" % entropy.item())
 
-                    writer.add_scalar("Val Loss/train", valloss.item(), i)
-                    writer.add_scalar("Policy Loss/train", polloss.item(), i)
-                    writer.add_scalar("Entory/train", entropy, i)
+                    #writer.add_scalar("Val Loss/train", valloss.item(), i)
+                    #writer.add_scalar("Policy Loss/train", polloss.item(), i)
+                    #writer.add_scalar("Entory/train", entropy, i)
 
                 if (i + 1) % self.check_freq == 0:
                     count += 1
@@ -267,5 +278,7 @@ class TrainPipeline(object):
 
 # Start
 if __name__ == '__main__':
+
+
     training_pipeline = TrainPipeline(init_model=None)
     training_pipeline.run()

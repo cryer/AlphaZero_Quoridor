@@ -133,8 +133,8 @@ class PolicyValueNet(object):
         """
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            state_batch = Variable(torch.FloatTensor(state_batch).cuda())
-            log_act_probs, value = self.policy_value_net(state_batch)
+            state_batch = Variable(torch.FloatTensor(state_batch.float()).cuda())
+            log_act_probs, value = self.policy_value_net(state_batch.float())
             act_probs = np.exp(log_act_probs.data.cpu().numpy())
             return act_probs, value.data.cpu().numpy()
         else:
@@ -167,9 +167,9 @@ class PolicyValueNet(object):
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            state_batch = Variable(torch.FloatTensor(state_batch).cuda())
-            mcts_probs = Variable(torch.FloatTensor(mcts_probs).cuda())
-            winner_batch = Variable(torch.FloatTensor(winner_batch).cuda())
+            state_batch = Variable(torch.FloatTensor(state_batch.float()).cuda())
+            mcts_probs = Variable(torch.FloatTensor(mcts_probs.float()).cuda())
+            winner_batch = Variable(torch.FloatTensor(winner_batch.float()).cuda())
         else:
             # device = torch.device("cpu")
             state_batch = Variable(torch.FloatTensor(state_batch))
