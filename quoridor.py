@@ -44,7 +44,7 @@ class Quoridor(object):
         # Initialize Player Locations
         self._positions = {
             1: (BOARD_SIZE ** 2) - (BOARD_SIZE//2) - 1,
-            2: 2
+            2: BOARD_SIZE // 2
         }
 
         self._DIRECTIONS = {

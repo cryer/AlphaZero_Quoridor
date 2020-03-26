@@ -118,7 +118,7 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.zeros((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
             v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:11, :,:], state[5:8,:,:], cur_player])
 
@@ -166,7 +166,7 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.zeros((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
             hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:11, :,:], state[5:8,:,:], cur_player])
 
@@ -182,6 +182,10 @@ class TrainPipeline(object):
             hv_equi_mcts_prob[5] = mcts_prob[4]
             hv_equi_mcts_prob[0] = mcts_prob[1]
             hv_equi_mcts_prob[1] = mcts_prob[0]
+            hv_equi_mcts_prob[2] = mcts_prob[3]
+            hv_equi_mcts_prob[3] = mcts_prob[2]
+            hv_equi_mcts_prob[6] = mcts_prob[7]
+            hv_equi_mcts_prob[7] = mcts_prob[6]
            
             h_wall_actions = hv_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
             v_wall_actions = hv_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
@@ -218,6 +222,8 @@ class TrainPipeline(object):
 
         dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
 
+        valloss_acc, polloss_acc, entropy_acc = 0
+
 
         for i in range(NUM_EPOCHS):
             for i, (state, mcts_prob, winner) in enumerate(dataloader):
@@ -233,6 +239,10 @@ class TrainPipeline(object):
 
                 iter_count += 1
 
+                valloss_acc += valloss.item()
+                polloss_acc += polloss.item()
+                entropy_acc += entropy.item()
+
             #kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
             #if kl > self.kl_targ * 4:  
             #    break
@@ -243,11 +253,15 @@ class TrainPipeline(object):
             #    self.lr_multiplier *= 1.5
 
 
+        valloss_mean = valloss_acc / len(dataloader)
+        polloss_mean = polloss_acc / len(dataloader)
+        entropy_mean = entropy_acc / len(dataloader)
+
         #explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
         #explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
         #print( "kl:{:.5f}, lr_multiplier:{:.3f}, value loss:{}, policy loss:[], entropy:{}".format(
         #        kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
-        return valloss, polloss, entropy
+        return valloss_mean, polloss_mean, entropy_mean
 
 
     def run(self):
