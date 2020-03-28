@@ -51,14 +51,14 @@ class TrainPipeline(object):
     def get_equi_data(self, play_data):
 
         extend_data = []
-        for state, mcts_prob, winner in play_data:
+        for i, (state, mcts_prob, winner) in enumerate(play_data):
 
 
             ## horizontally flipped game
 
             wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
             flipped_wall_state = []
-           
+
             for i in range(3):
                 wall_padded = np.fliplr(wall_state[i])
                 wall_padded = np.pad(wall_padded, (0,1), mode='constant', constant_values=0)
@@ -66,7 +66,7 @@ class TrainPipeline(object):
 
             flipped_wall_state = np.array(flipped_wall_state)
 
-             
+
 
             player_position = state[3:5, :,:]
 
@@ -89,10 +89,10 @@ class TrainPipeline(object):
             h_equi_mcts_prob[6] = mcts_prob[7]
             h_equi_mcts_prob[2] = mcts_prob[3]
             h_equi_mcts_prob[3] = mcts_prob[2]
-           
+
             h_wall_actions = h_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
             v_wall_actions = h_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
-            
+
             flipped_h_wall_actions = np.fliplr(h_wall_actions)
             flipped_v_wall_actions = np.fliplr(v_wall_actions)
 
@@ -102,7 +102,7 @@ class TrainPipeline(object):
             ## Vertically flipped game
 
             flipped_wall_state = []
-           
+
             for i in range(3):
                 wall_padded = np.flipud(wall_state[i])
                 wall_padded = np.pad(wall_padded, (0,1), mode='constant', constant_values=0)
@@ -118,9 +118,9 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2* WALL_NUM,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
-            v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:11, :,:], state[5:8,:,:], cur_player])
+            v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5+WALL_NUM:5 + 2*WALL_NUM, :,:], state[5:5+WALL_NUM,:,:], cur_player])
 
 
 
@@ -134,10 +134,10 @@ class TrainPipeline(object):
             v_equi_mcts_prob[5] = mcts_prob[4]
             v_equi_mcts_prob[0] = mcts_prob[1]
             v_equi_mcts_prob[1] = mcts_prob[0]
-           
+
             h_wall_actions = v_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
             v_wall_actions = v_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
-            
+
             flipped_h_wall_actions = np.flipud(h_wall_actions)
             flipped_v_wall_actions = np.flipud(v_wall_actions)
 
@@ -150,7 +150,7 @@ class TrainPipeline(object):
 
             wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
             flipped_wall_state = []
-           
+
             for i in range(3):
                 wall_padded = np.fliplr(np.flipud(wall_state[i]))
                 wall_padded = np.pad(wall_padded, (0,1), mode='constant', constant_values=0)
@@ -166,9 +166,9 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[11,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2*WALL_NUM,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
-            hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[8:11, :,:], state[5:8,:,:], cur_player])
+            hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5 + WALL_NUM:5 + 2*WALL_NUM, :,:], state[5:5+WALL_NUM,:,:], cur_player])
 
 
 
@@ -186,34 +186,33 @@ class TrainPipeline(object):
             hv_equi_mcts_prob[3] = mcts_prob[2]
             hv_equi_mcts_prob[6] = mcts_prob[7]
             hv_equi_mcts_prob[7] = mcts_prob[6]
-           
+
             h_wall_actions = hv_equi_mcts_prob[12:12 + (BOARD_SIZE-1) ** 2].reshape(BOARD_SIZE-1, BOARD_SIZE-1)
             v_wall_actions = hv_equi_mcts_prob[12 + (BOARD_SIZE-1) ** 2:].reshape(BOARD_SIZE-1, BOARD_SIZE -1)
-            
+
             flipped_h_wall_actions = np.fliplr(np.flipud(h_wall_actions))
             flipped_v_wall_actions = np.fliplr(np.flipud(v_wall_actions))
 
             hv_equi_mcts_prob[12:] = np.hstack([flipped_h_wall_actions.flatten(), flipped_v_wall_actions.flatten()])
 
 
-
             ###########
 
             extend_data.append((state, mcts_prob, winner))
             extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
-            extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
-            extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
+            # extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
+            # extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
 
         return extend_data
 
     def collect_selfplay_data(self, n_games=1):
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(self.mcts_player, temp=self.temp)  # 进行自博弈
+            winner, play_data = self.game.start_self_play(self.mcts_player, temp=self.temp)
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
 
             play_data = self.get_equi_data(play_data)
-        
+
 
             self.data_buffer.extend(play_data)
             print("{}th game finished. Current episode length: {}, Length of data buffer: {}".format(i, self.episode_len, len(self.data_buffer)))
@@ -222,7 +221,10 @@ class TrainPipeline(object):
 
         dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
 
-        valloss_acc, polloss_acc, entropy_acc = 0
+        valloss_acc = 0
+        polloss_acc = 0
+        entropy_acc = 0
+
 
 
         for i in range(NUM_EPOCHS):
@@ -230,12 +232,12 @@ class TrainPipeline(object):
                 valloss, polloss, entropy = self.policy_value_net.train_step(state, mcts_prob, winner, self.learn_rate * self.lr_multiplier)
                 new_probs, new_v = self.policy_value_net.policy_value(state)
 
-                global iter_count 
+                global iter_count
 
                 writer.add_scalar("Val Loss/train", valloss.item(), iter_count)
                 writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
                 writer.add_scalar("Entory/train", entropy, iter_count)
- 
+
 
                 iter_count += 1
 
@@ -244,18 +246,18 @@ class TrainPipeline(object):
                 entropy_acc += entropy.item()
 
             #kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
-            #if kl > self.kl_targ * 4:  
+            #if kl > self.kl_targ * 4:
             #    break
-        
+
             #if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
             #    self.lr_multiplier /= 1.5
             #elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
             #    self.lr_multiplier *= 1.5
 
 
-        valloss_mean = valloss_acc / len(dataloader)
-        polloss_mean = polloss_acc / len(dataloader)
-        entropy_mean = entropy_acc / len(dataloader)
+        valloss_mean = valloss_acc / (len(dataloader) * NUM_EPOCHS)
+        polloss_mean = polloss_acc / (len(dataloader) * NUM_EPOCHS)
+        entropy_mean = entropy_acc / (len(dataloader) * NUM_EPOCHS)
 
         #explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
         #explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
@@ -274,7 +276,7 @@ class TrainPipeline(object):
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > BATCH_SIZE:
                     valloss, polloss, entropy = self.policy_update()
-                    print("VALUE LOSS: %0.3f " % valloss.item(), "POLICY LOSS: %0.3f " % polloss.item(), "ENTROPY:i %0.3f" % entropy.item())
+                    print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY:i %0.3f" % entropy)
 
                     #writer.add_scalar("Val Loss/train", valloss.item(), i)
                     #writer.add_scalar("Policy Loss/train", polloss.item(), i)
@@ -285,7 +287,7 @@ class TrainPipeline(object):
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
                     # Add generation to filename
-                    self.policy_value_net.save_model('model_' + str(count) + '_' + str("%0.3f_" % (valloss.item()+polloss.item())) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
+                    self.policy_value_net.save_model('model_' + str(count) + '_' + str("%0.3f_" % (valloss+polloss) + str(time.strftime('%Y-%m-%d', time.localtime(time.time())))))
         except KeyboardInterrupt:
             print('\n\rquit')
 

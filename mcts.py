@@ -165,7 +165,7 @@ class MCTS(object):
             node.expand(action_probs, game)
         # 结束了，返回真实的叶子结点值，不需要网络评估了。
         else:
-            leaf_value = 1.0 if winner == current_player else -1.0  # Fix bug that all winners are current player
+            leaf_value = 1.0 if winner == game.get_current_player() else -1.0  # Fix bug that all winners are current player
             # print(leaf_value)
         # 迭代更新所有祖先节点
         # print("call update")
@@ -205,20 +205,20 @@ class MCTS(object):
 
 
 class MCTSPlayer(object):
-    # 初始化AI，基于MCTS
+    #
     def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=1):
         self.mcts = MCTS(policy_value_function, c_puct, n_playout)
         self._is_selfplay = is_selfplay
 
-    # 设置玩家
+    #
     def set_player_ind(self, p):
         self.player = p
 
-    # 重置玩家
+    #
     def reset_player(self):
         self.mcts.update_with_move(-1, None)
 
-    # 获取落子
+    # Choose an action during the play
     def choose_action(self, game, temp=1e-3, return_prob=0):
         sensible_moves = game.actions()  # 获取所有可行的落子
         move_probs = np.zeros(12 + (BOARD_SIZE - 1) ** 2 * 2)  # 获取落子的概率，由神经网络输出
@@ -226,19 +226,33 @@ class MCTSPlayer(object):
             acts, probs = self.mcts.get_move_probs(game, temp)  # 获取落子以及对应的落子概率
             move_probs[list(acts)] = probs  # 将概率转到move_probs列表中
             state = game.state()
-            # 如果是自博弈的话
+
             if self._is_selfplay:
-                # 为了增加探索，保证每个节点都有可能被选中，加入狄利克雷噪声
-                move = np.random.choice(acts, p=0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs))))
+
+                probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs)))
+
+                max_acts = np.argwhere(probs == np.amax(probs))[0]
+                print(max_acts, acts)
+                max_act = np.random.choice(max_acts)
+
+                move = acts[max_act]
+
+                # move = np.random.choice(acts, p=0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs))))
                 self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
             else:
-                # 如果采用默认的temp = le-3，几乎相当于选择最高概率的落子
-                move = np.random.choice(acts, p=probs)
-                # 重置根节点
+
+                #move = np.random.choice(acts, p=probs)
+
+                max_acts = np.argwhere(probs == np.amax(probs))[0]
+
+                max_act = np.random.choice(max_acts)
+
+                move = acts[max_act]
+
+
                 self.mcts.update_with_move(-1, state)
             # location = board.move_to_location(move)
             #                print("AI move: %d,%d\n" % (location[0], location[1]))
-            # 选择返回落子和相应的概率，还是只返回落子，因为自博弈时需要保存概率来训练网络，而真正落子时只要知道move就行了
             if return_prob:
                 return move, move_probs
             else:

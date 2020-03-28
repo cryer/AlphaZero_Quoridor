@@ -63,8 +63,7 @@ class Quoridor(object):
         # Vertical Wall - -1
         self._intersections = np.zeros((BOARD_SIZE - 1) ** 2)
 
-        self._player1_walls_remaining = WALL_NUM
-        self._player2_walls_remaining = WALL_NUM
+        self._player_walls_remaining = {1: WALL_NUM, 2: WALL_NUM}
 
     def state(self):
         """Returns a set of 5x5 planes that represent the game state.
@@ -78,18 +77,18 @@ class Quoridor(object):
         13. Whose turn it is (0 for player 1, 1 for player 2)
         """
         player1_position_plane = self.tiles.copy()
-        player1_position_plane[self._positions[1]] = 1
+        player1_position_plane[self._positions[self.current_player]] = 1
         player1_position_plane = player1_position_plane.reshape([BOARD_SIZE, BOARD_SIZE])
 
         player2_position_plane = self.tiles.copy()
-        player2_position_plane[self._positions[2]] = 1
+        player2_position_plane[self._positions[3 - self.current_player]] = 1
         player2_position_plane = player2_position_plane.reshape([BOARD_SIZE, BOARD_SIZE])
 
         player1_walls_plane = np.zeros([WALL_NUM, BOARD_SIZE, BOARD_SIZE])
         player2_walls_plane = np.zeros([WALL_NUM, BOARD_SIZE, BOARD_SIZE])
 
-        player1_walls_plane[self._player1_walls_remaining - 1, :, :] = 1
-        player2_walls_plane[self._player2_walls_remaining - 1, :, :] = 1
+        player1_walls_plane[self._player_walls_remaining[self.current_player] - 1, :, :] = 1
+        player2_walls_plane[self._player_walls_remaining[3 - self.current_player] - 1, :, :] = 1
 
         # 1 where vertical walls are placed
         # if state size is ?x9x9, use only ?x8x8 field
@@ -118,33 +117,22 @@ class Quoridor(object):
             constant_values=0
         )
 
-        # stack
+
+        state = np.stack([
+                no_walls,
+                vertical_walls,
+                horizontal_walls,
+                player1_position_plane,
+                player2_position_plane,
+            ])
+
         if self.current_player == 1:
-            state = np.stack([
-                no_walls,
-                vertical_walls,
-                horizontal_walls,
-                player1_position_plane,
-                player2_position_plane,
-            ])
-
-            # print('Shape is {shape}'.format(shape=state.shape))
-
             current_player_plane = np.zeros([1, BOARD_SIZE, BOARD_SIZE])
-            state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
-
-        if self.current_player == 2:
-            state = np.stack([
-                no_walls,
-                vertical_walls,
-                horizontal_walls,
-                player2_position_plane,
-                player1_position_plane,
-            ])
-
+        else:
             current_player_plane = np.ones([1, BOARD_SIZE, BOARD_SIZE])
-            state = np.vstack([state, player2_walls_plane, player1_walls_plane, current_player_plane])
-            # print(state.shape)
+
+        state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
+
         return state
 
 
@@ -171,16 +159,15 @@ class Quoridor(object):
 
         opponent = 1 if player == 2 else 2
         opponent_loc = self._positions[opponent]
-        walls = self._intersections  # 
-        # 
+        walls = self._intersections  #
+        #
         pawn_actions = self._valid_pawn_actions(location=location,
                                                 opponent_loc=opponent_loc, walls=walls, player=player)
-        # 
-        if ((self.current_player == 1 and self._player1_walls_remaining > 0)
-            or (self.current_player == 2 and self._player2_walls_remaining > 0)):
-            wall_actions = self._valid_wall_actions()  # 
+        #
+        if (self._player_walls_remaining[self.current_player] > 0):
+            wall_actions = self._valid_wall_actions()  #
 
-            # 
+            #
             wall_actions = [action + 12 for action in wall_actions]
         else:
             wall_actions = []
@@ -193,7 +180,7 @@ class Quoridor(object):
         # self._logger.info("Player {player} chooses action {action}".format(player=self.current_player, action=action))
         player = self.current_player
         done = False
-        # 
+        #
         self.valid_actions = self.actions()
 
         if self.safe:
@@ -217,7 +204,7 @@ class Quoridor(object):
 
         return done, winner
 
-    # 
+    #
     def has_a_winner2(self):
         game_over = False
         winner = None
@@ -228,7 +215,7 @@ class Quoridor(object):
             winner = 1
             game_over = True
         return game_over, winner
-   
+
     def has_a_winner(self):
         game_over = False
         winner = None
@@ -241,7 +228,7 @@ class Quoridor(object):
             winner = 1
             game_over = True
 
-        if abs(dist1 - dist2) > 1 and self._player1_walls_remaining == 0 and self._player2_walls_remaining == 0:
+        if abs(dist1 - dist2) > 1 and self._player_walls_remaining[1] == 0 and self._player_walls_remaining[2] == 0:
             winner = 2 if dist1 > dist2 else 1
             game_over = True
 
@@ -319,10 +306,7 @@ class Quoridor(object):
         else:
             self._intersections[action - (BOARD_SIZE - 1) ** 2] = -1
 
-        if self.current_player == 1:
-            self._player1_walls_remaining -= 1
-        else:
-            self._player2_walls_remaining -= 1
+        self._player_walls_remaining[self.current_player] -= 1
         # self._logger.info(self._intersections)
 
     def rotate_players(self):
@@ -685,7 +669,7 @@ class Quoridor(object):
         grid_new = np.zeros([9, 9])
         grid_new[player1_row, player1_col] = 1
         grid_new[player2_row, player2_col] = 2
-        
+
         i_reshaped = self._intersections.reshape([BOARD_SIZE - 1, BOARD_SIZE - 1])
         for i in range(BOARD_SIZE -1):
             for j in range(BOARD_SIZE - 1):
@@ -715,10 +699,10 @@ class Quoridor(object):
 
         """
         # Original print board code
-        
+
         grid = [['{dash:4}'.format(dash=dash) for i in range(5)] for i in range(5)]
         i_reshaped = self._intersections.reshape([4, 4])
-        
+
         grid[player1_row][player1_col] = '{x:4}'.format(x=x)
         grid[player2_row][player2_col] = '{o:4}'.format(o=o)
 
@@ -743,15 +727,15 @@ class Quoridor(object):
 
     def clone(self):
         return Quoridor()
-    
+
     def start_self_play(self, player, is_shown=0, temp=1e-3):
-        
+
         self.reset()     #
         p1, p2 = self.players
-        states, mcts_probs, current_players = [], [], []       # 
+        states, mcts_probs, current_players = [], [], []       #
 
-        while(1):   # 
-            # 
+        while(1):   #
+            #
             tic = time.time()
             move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  #
             toc = time.time()
@@ -759,11 +743,11 @@ class Quoridor(object):
             print('[Wall probs]\n', move_probs[12:])
             print("player %s chose move : %s, prob: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
 
-            # 
+            #
             states.append(self.state())
             mcts_probs.append(move_probs)
             current_players.append(self.current_player)
-            # 
+            #
             self.step(move)
 
             dist1, dist2 = self.get_shortest_path()
@@ -775,12 +759,12 @@ class Quoridor(object):
             #     self.graphic(self.board, p1, p2)
             end, winner = self.has_a_winner()
             if end:
-                # 
+                #
                 winners_z = np.zeros(len(current_players))
                 if winner != -1:
-                    winners_z[np.array(current_players) == winner] = 1.0        # 
-                    winners_z[np.array(current_players) != winner] = -1.0       # 
-                # 
+                    winners_z[np.array(current_players) == winner] = 1.0        #
+                    winners_z[np.array(current_players) != winner] = -1.0       #
+                #
                 player.reset_player()
                 if is_shown:
                     if winner != -1:
