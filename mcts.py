@@ -230,10 +230,24 @@ class MCTSPlayer(object):
 
                 probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs)))
 
-                #max_act = np.random.choice(max_acts)
-                #move = acts[max_act]
+                move = acts[np.argmax(probs)]
+                # move = np.random.choice(acts, p=probs)
+                """
+                no_walls = True
+                for i in acts:
+                    if i > 11:
+                        no_walls = False
 
-                move = np.random.choice(acts, p=probs)
+                if no_walls:
+                    move = np.random.choice(acts, p=probs)
+                else:
+                    if np.random.rand(1) > 0.3:
+                        move = np.random.choice(acts[:12], p=probs[:12])
+                    else:
+                        move = np.random.choice(acts[12:], p=probs[12:])
+                """
+
+                #move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
             else:
 
