@@ -24,6 +24,7 @@ class TrainPipeline(object):
     def __init__(self, init_model=None):
         self.game = Quoridor()
 
+
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
@@ -34,11 +35,14 @@ class TrainPipeline(object):
         self.play_batch_size = 1
         self.kl_targ = 0.02
         self.check_freq = 5
-        self.game_batch_num = 2000
+        self.game_batch_num = 10000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
 
         self.old_probs = 0
+        self.new_probs = 0
+
+        self.first_trained = False
 
         if init_model:
             self.policy_value_net = PolicyValueNet(model_file=init_model)
@@ -200,8 +204,8 @@ class TrainPipeline(object):
 
             extend_data.append((state, mcts_prob, winner))
             extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
-            # extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
-            # extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
+            extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
+            extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
 
         return extend_data
 
@@ -228,15 +232,30 @@ class TrainPipeline(object):
 
 
         for i in range(NUM_EPOCHS):
+
+            self.old_probs = self.new_probs
+
+            if self.first_trained:
+                kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(self.new_probs + 1e-10)), axis=1))
+                if kl > self.kl_targ * 4:
+                    break
+
+                if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
+                    self.lr_multiplier /= 1.5
+                elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
+                    self.lr_multiplier *= 1.5
+
+
             for i, (state, mcts_prob, winner) in enumerate(dataloader):
                 valloss, polloss, entropy = self.policy_value_net.train_step(state, mcts_prob, winner, self.learn_rate * self.lr_multiplier)
-                new_probs, new_v = self.policy_value_net.policy_value(state)
+                self.new_probs, new_v = self.policy_value_net.policy_value(state)
 
                 global iter_count
 
                 writer.add_scalar("Val Loss/train", valloss.item(), iter_count)
                 writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
                 writer.add_scalar("Entory/train", entropy, iter_count)
+                writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
 
 
                 iter_count += 1
@@ -245,14 +264,7 @@ class TrainPipeline(object):
                 polloss_acc += polloss.item()
                 entropy_acc += entropy.item()
 
-            #kl = np.mean(np.sum(self.old_probs * (np.log(self.old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
-            #if kl > self.kl_targ * 4:
-            #    break
-
-            #if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
-            #    self.lr_multiplier /= 1.5
-            #elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
-            #    self.lr_multiplier *= 1.5
+            self.first_trained = True
 
 
         valloss_mean = valloss_acc / (len(dataloader) * NUM_EPOCHS)
@@ -269,14 +281,14 @@ class TrainPipeline(object):
     def run(self):
 
         try:
-            self.collect_selfplay_data(5)
+            self.collect_selfplay_data(10)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > BATCH_SIZE:
                     valloss, polloss, entropy = self.policy_update()
-                    print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY:i %0.3f" % entropy)
+                    print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY: %0.3f" % entropy)
 
                     #writer.add_scalar("Val Loss/train", valloss.item(), i)
                     #writer.add_scalar("Policy Loss/train", polloss.item(), i)

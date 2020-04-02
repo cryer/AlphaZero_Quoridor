@@ -56,12 +56,12 @@ def main():
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet('policymodel_400_1.541_2020-03-25').policy_value_fn, c_puct=5, n_playout=200, is_selfplay=0)
-    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 
+    MCTS_Alpha = A_Player(PolicyValueNet('model_34_1.698_2020-04-02').policy_value_fn, c_puct=5, n_playout=400, is_selfplay=0)
+    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  #
 
     random = RandomAgent()
     randomMove = RandomMoveAgent()
-    
+
 
     if args.player_type == 1:
         player_types = {1: 'human', 2: 'human'}
@@ -131,7 +131,7 @@ def main():
                     if player_moved:
                         real_action = players[game.current_player].choose_action()
                         # move_history.append(real_action)
-                        done, winner = game.step(real_action)
+                        game.step(real_action)
                         render(game, screen)  # 渲染游戏
                         break
 
@@ -145,7 +145,7 @@ def main():
                         if player_moved == True:
                             real_action = players[game.current_player].choose_action()
                             # move_history.append(real_action)
-                            done, winner = game.step(real_action)
+                            game.step(real_action)
                             render(game, screen)  # 渲染游戏
                             break
 
@@ -160,13 +160,14 @@ def main():
             tic = time.time()
             # real_action = np.random.choice(valid_actions)
             real_action = players[game.current_player].choose_action(game)
-            
+
             dist1, dist2 = game.get_shortest_path()
             # move_history.append(real_action)
             print("Player 1's shortest path: {}, Player 2's shortest path is {}".format(dist1, dist2))
             toc = time.time()
             print("Computer's action:", real_action, ", spent %s seconds" % str(toc - tic))
-            done, winner = game.step(real_action)
+            game.step(real_action)
+            done, winner = game.has_a_winner()
             # render(game, screen)
             # valid_actions = game.valid_actions
         # if game.current_player == 1:
@@ -322,10 +323,10 @@ def draw_game(game, screen, valid_actions):
     # Draw Walls Remaining
     font = pygame.font.SysFont("arial", 18)
 
-    player1_walls = font.render("Walls Remaining: {player1}".format(player1=game._player1_walls_remaining), 1, BLUE)
+    player1_walls = font.render("Walls Remaining: {player1}".format(player1=game._player_walls_remaining[1]), 1, BLUE)
     player1_text_position = SCREEN_HEIGHT + 2, SCREEN_HEIGHT * 0.9
 
-    player2_walls = font.render("Walls Remaining: {player2}".format(player2=game._player2_walls_remaining), 1, RED)
+    player2_walls = font.render("Walls Remaining: {player2}".format(player2=game._player_walls_remaining[2]), 1, RED)
     player2_text_position = SCREEN_HEIGHT + 2, SCREEN_HEIGHT * 0.1
 
     move_history = []

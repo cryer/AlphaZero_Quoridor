@@ -192,6 +192,8 @@ class Quoridor(object):
         else:
             self._handle_wall_action(action - 12)
 
+        self.rotate_players()
+        """
         game_over, winner = self.has_a_winner()
         if game_over:
             #  print("game over !winner is player" + str(winner))
@@ -203,9 +205,9 @@ class Quoridor(object):
             # print("game over !winner is player" + str(winner))
 
         return done, winner
+        """
 
-    #
-    def has_a_winner2(self):
+    def has_a_winner3(self):
         game_over = False
         winner = None
         if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
@@ -292,7 +294,7 @@ class Quoridor(object):
         elif action == self._DIRECTIONS['NE']:
             self._positions[player] -= BOARD_SIZE - 1
         elif action == self._DIRECTIONS['SW']:
-            self._positions[player] += BOARD_SIZE -1
+            self._positions[player] += BOARD_SIZE - 1
         elif action == self._DIRECTIONS['SE']:
             self._positions[player] += BOARD_SIZE + 1
         else:
@@ -734,20 +736,25 @@ class Quoridor(object):
         p1, p2 = self.players
         states, mcts_probs, current_players = [], [], []       #
 
-        while(1):   #
-            #
+        time_step = 0
+
+
+        while(1):
+
+            time_step += 1
+
             tic = time.time()
-            move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  #
+            move, move_probs = player.choose_action(self, temp=temp, return_prob=1, time_step=time_step)
             toc = time.time()
             print('[Move probs]\n', move_probs[:12])
             print('[Wall probs]\n', move_probs[12:])
             print("player %s chose move : %s, prob: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
 
-            #
+
             states.append(self.state())
             mcts_probs.append(move_probs)
             current_players.append(self.current_player)
-            #
+
             self.step(move)
 
             dist1, dist2 = self.get_shortest_path()
@@ -758,6 +765,7 @@ class Quoridor(object):
             # if is_shown:
             #     self.graphic(self.board, p1, p2)
             end, winner = self.has_a_winner()
+
             if end:
                 #
                 winners_z = np.zeros(len(current_players))
