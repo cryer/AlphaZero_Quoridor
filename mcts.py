@@ -36,7 +36,6 @@ class TreeNode(object):
         #noise_prob = np.random.dirichlet(0.3 * np.ones(len(action_priors)))
 
         for action, prob in action_priors:
-            """
             if action < 12:
 
                 # Code for restrict dummy expand
@@ -63,15 +62,17 @@ class TreeNode(object):
                         parent_node = parent_node._parent
                         if parent_node is not None:
                             parent_state = parent_node._state
-            """
 
             # Add condition 'not duplicated_node'
 
             #if self._parent is None:
             #    prob = 0.75 * prob + 0.25 * noise_prob[i]
-
+            if not duplicated_node and action not in self._children:
+                self._children[action] = TreeNode(self, prob, next_state, action)
+            """
             if action not in self._children:
                 self._children[action] = TreeNode(self, prob, None, action)
+            """
 
     def select(self, c_puct):
         """
