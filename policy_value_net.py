@@ -76,7 +76,7 @@ class policy_value_net(nn.Module):
         self.conv3 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2+ 12)
+        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2 + (8 + (WALL_NUM + 1)*2))
 
 
     def forward(self,x):
@@ -118,10 +118,10 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  # 
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),NN_DIM).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock, (8 + (WALL_NUM+1) * 2),NN_DIM).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock,6 + (WALL_NUM * 2),NN_DIM)
+            self.policy_value_net = policy_value_net(BasicBlock, (8 + (WALL_NUM+1) * 2),NN_DIM)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 
@@ -133,7 +133,7 @@ class PolicyValueNet(object):
         """
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            state_batch = Variable(torch.FloatTensor(state_batch).cuda())
+            state_batch = Variable(torch.FloatTensor(state_batch.float()).cuda())
             log_act_probs, value = self.policy_value_net(state_batch.float())
             act_probs = np.exp(log_act_probs.data.cpu().numpy())
             return act_probs, value.data.cpu().numpy()
@@ -148,7 +148,7 @@ class PolicyValueNet(object):
         """
         """
         legal_positions = game.actions()  # 
-        current_state = np.ascontiguousarray(game.state()).reshape([1, 6 + (WALL_NUM * 2), BOARD_SIZE, BOARD_SIZE])
+        current_state = np.ascontiguousarray(game.state()).reshape([1, 8 + ((WALL_NUM+1) * 2), BOARD_SIZE, BOARD_SIZE])
         if self.use_gpu:
             # device = torch.device("cuda:0")
             log_act_probs, value = self.policy_value_net(Variable(torch.from_numpy(current_state)).cuda().float())
@@ -181,7 +181,7 @@ class PolicyValueNet(object):
 
         # 
         log_act_probs, value = self.policy_value_net(state_batch)
-        
+        6
         value_loss = F.mse_loss(value.view(-1), winner_batch)
 
         # print(mcts_probs.shape, log_act_probs.shape)

@@ -84,11 +84,11 @@ class Quoridor(object):
         player2_position_plane[self._positions[3 - self.current_player]] = 1
         player2_position_plane = player2_position_plane.reshape([BOARD_SIZE, BOARD_SIZE])
 
-        player1_walls_plane = np.zeros([WALL_NUM, BOARD_SIZE, BOARD_SIZE])
-        player2_walls_plane = np.zeros([WALL_NUM, BOARD_SIZE, BOARD_SIZE])
+        player1_walls_plane = np.zeros([WALL_NUM+1, BOARD_SIZE, BOARD_SIZE])
+        player2_walls_plane = np.zeros([WALL_NUM+1, BOARD_SIZE, BOARD_SIZE])
 
-        player1_walls_plane[self._player_walls_remaining[self.current_player] - 1, :, :] = 1
-        player2_walls_plane[self._player_walls_remaining[3 - self.current_player] - 1, :, :] = 1
+        player1_walls_plane[self._player_walls_remaining[self.current_player], :, :] = 1
+        player2_walls_plane[self._player_walls_remaining[3 - self.current_player], :, :] = 1
 
         # 1 where vertical walls are placed
         # if state size is ?x9x9, use only ?x8x8 field
@@ -117,6 +117,24 @@ class Quoridor(object):
             constant_values=0
         )
 
+        # shortest path distance
+        dist1, dist2 = self.get_shortest_path()
+        dist1_plane = np.zeros(25)
+        dist2_plane = np.zeros(25)
+
+        if self.current_player == 1:
+            for i in range(dist1):
+                dist1_plane[i] = 1
+            for i in range(dist2):
+                dist2_plane[i] = 1
+        else:
+            for i in range(dist2):
+                dist2_plane[i] = 1
+            for i in range(dist1):
+                dist1_plane[i] = 1
+
+        dist1_plane = np.reshape(dist1_plane, (1, BOARD_SIZE, BOARD_SIZE))
+        dist2_plane = np.reshape(dist2_plane, (1, BOARD_SIZE, BOARD_SIZE))
 
         state = np.stack([
                 no_walls,
@@ -131,7 +149,8 @@ class Quoridor(object):
         else:
             current_player_plane = np.ones([1, BOARD_SIZE, BOARD_SIZE])
 
-        state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
+        state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane, dist1_plane, dist2_plane])
+        # state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
 
         return state
 

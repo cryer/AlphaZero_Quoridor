@@ -36,6 +36,7 @@ class TreeNode(object):
         #noise_prob = np.random.dirichlet(0.3 * np.ones(len(action_priors)))
 
         for action, prob in action_priors:
+            """
             if action < 12:
 
                 # Code for restrict dummy expand
@@ -62,17 +63,12 @@ class TreeNode(object):
                         parent_node = parent_node._parent
                         if parent_node is not None:
                             parent_state = parent_node._state
-
-            # Add condition 'not duplicated_node'
-
-            #if self._parent is None:
-            #    prob = 0.75 * prob + 0.25 * noise_prob[i]
+        
             if not duplicated_node and action not in self._children:
                 self._children[action] = TreeNode(self, prob, next_state, action)
             """
             if action not in self._children:
                 self._children[action] = TreeNode(self, prob, None, action)
-            """
 
     def select(self, c_puct):
         """
@@ -228,40 +224,15 @@ class MCTSPlayer(object):
             state = game.state()
 
             if self._is_selfplay:
+                probs = 0.8 * probs + 0.2 * np.random.dirichlet(0.3 * np.ones(len(probs)))
 
-                probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs)))
-
-                move = acts[np.argmax(probs)]
-                # move = np.random.choice(acts, p=probs)
-                """
-                no_walls = True
-                for i in acts:
-                    if i > 11:
-                        no_walls = False
-
-                if no_walls:
-                    move = np.random.choice(acts, p=probs)
-                else:
-                    if np.random.rand(1) > 0.3:
-                        move = np.random.choice(acts[:12], p=probs[:12])
-                    else:
-                        move = np.random.choice(acts[12:], p=probs[12:])
-                """
-
-                #move = np.random.choice(acts, p=probs)
+                # move = acts[np.argmax(probs)]
+                move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
             else:
-
                 move = np.random.choice(acts, p=probs)
-
-                #max_acts = np.argwhere(probs == np.amax(probs))[0]
-                #max_act = np.random.choice(max_acts)
-                #move = acts[max_act]
-
-
                 self.mcts.update_with_move(-1, state)
-            # location = board.move_to_location(move)
-            #                print("AI move: %d,%d\n" % (location[0], location[1]))
+
             if return_prob:
                 return move, move_probs
             else:

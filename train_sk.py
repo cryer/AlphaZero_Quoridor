@@ -35,7 +35,7 @@ class TrainPipeline(object):
         self.play_batch_size = 1
         self.kl_targ = 0.02
         self.check_freq = 5
-        self.game_batch_num = 10000
+        self.game_batch_num = 1000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
 
@@ -69,7 +69,6 @@ class TrainPipeline(object):
                 flipped_wall_state.append(wall_padded)
 
             flipped_wall_state = np.array(flipped_wall_state)
-
 
 
             player_position = state[3:5, :,:]
@@ -115,7 +114,6 @@ class TrainPipeline(object):
             flipped_wall_state = np.array(flipped_wall_state)
 
 
-
             flipped_player_position = []
             for i in range(2):
                 flipped_player_position.append(np.flipud(player_position[1-i]))
@@ -146,9 +144,6 @@ class TrainPipeline(object):
             flipped_v_wall_actions = np.flipud(v_wall_actions)
 
             v_equi_mcts_prob[12:] = np.hstack([flipped_h_wall_actions.flatten(), flipped_v_wall_actions.flatten()])
-
-
-
 
             ## Horizontally-vertically flipped game
 
@@ -266,7 +261,6 @@ class TrainPipeline(object):
 
             self.first_trained = True
 
-
         valloss_mean = valloss_acc / (len(dataloader) * NUM_EPOCHS)
         polloss_mean = polloss_acc / (len(dataloader) * NUM_EPOCHS)
         entropy_mean = entropy_acc / (len(dataloader) * NUM_EPOCHS)
@@ -277,9 +271,7 @@ class TrainPipeline(object):
         #        kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
         return valloss_mean, polloss_mean, entropy_mean
 
-
     def run(self):
-
         try:
             self.collect_selfplay_data(10)
             count = 0
@@ -306,7 +298,6 @@ class TrainPipeline(object):
 
 # Start
 if __name__ == '__main__':
-
 
     training_pipeline = TrainPipeline(init_model=None)
     training_pipeline.run()

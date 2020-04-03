@@ -81,7 +81,7 @@ class MCTS(object):
         # Evaluate the leaf node by random rollout
         leaf_value = self._evaluate_rollout(game)
         # Update value and visit count of nodes in this traversal.
-        node.update_recursive(leaf_value)
+        node.update_recursive(-leaf_value)
 
     # 随机模拟下去，获得胜负结果，但是最深不模拟超过1000层
     def _evaluate_rollout(self, game, limit=1000):
