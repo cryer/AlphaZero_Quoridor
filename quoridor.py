@@ -119,22 +119,13 @@ class Quoridor(object):
 
         # shortest path distance
         dist1, dist2 = self.get_shortest_path()
-        dist1_plane = np.zeros(BOARD_SIZE ** 2)
-        dist2_plane = np.zeros(BOARD_SIZE ** 2)
 
         if self.current_player == 1:
-            for i in range(dist1):
-                dist1_plane[i] = 1
-            for i in range(dist2):
-                dist2_plane[i] = 1
+            dist1_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), dist1)
+            dist2_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), dist2)
         else:
-            for i in range(dist2):
-                dist2_plane[i] = 1
-            for i in range(dist1):
-                dist1_plane[i] = 1
-
-        dist1_plane = np.reshape(dist1_plane, (1, BOARD_SIZE, BOARD_SIZE))
-        dist2_plane = np.reshape(dist2_plane, (1, BOARD_SIZE, BOARD_SIZE))
+            dist1_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), dist2)
+            dist2_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), dist1)
 
         state = np.stack([
                 no_walls,

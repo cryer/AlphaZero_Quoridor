@@ -120,9 +120,9 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2* WALL_NUM,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2* (WALL_NUM+1),:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
-            v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5+WALL_NUM:5 + 2*WALL_NUM, :,:], state[5:5+WALL_NUM,:,:], cur_player])
+            v_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5+(WALL_NUM+1):5 + 2*(WALL_NUM+1), :,:], state[5:5+(WALL_NUM+1),:,:], cur_player])
 
 
 
@@ -165,9 +165,9 @@ class TrainPipeline(object):
 
             flipped_player_position = np.array(flipped_player_position)
 
-            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2*WALL_NUM,:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
+            cur_player = (np.ones((BOARD_SIZE, BOARD_SIZE)) - state[5 + 2*(WALL_NUM+1),:,:]).reshape(-1,BOARD_SIZE, BOARD_SIZE)
 
-            hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5 + WALL_NUM:5 + 2*WALL_NUM, :,:], state[5:5+WALL_NUM,:,:], cur_player])
+            hv_equi_state = np.vstack([flipped_wall_state, flipped_player_position, state[5 + (WALL_NUM+1):5 + 2*(WALL_NUM+1), :,:], state[5:5+(WALL_NUM+1),:,:], cur_player])
 
 
 
@@ -273,7 +273,7 @@ class TrainPipeline(object):
 
     def run(self):
         try:
-            self.collect_selfplay_data(10)
+            self.collect_selfplay_data(100)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s
