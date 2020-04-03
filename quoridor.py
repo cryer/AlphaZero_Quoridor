@@ -119,8 +119,8 @@ class Quoridor(object):
 
         # shortest path distance
         dist1, dist2 = self.get_shortest_path()
-        dist1_plane = np.zeros(25)
-        dist2_plane = np.zeros(25)
+        dist1_plane = np.zeros(BOARD_SIZE ** 2)
+        dist2_plane = np.zeros(BOARD_SIZE ** 2)
 
         if self.current_player == 1:
             for i in range(dist1):
@@ -687,7 +687,7 @@ class Quoridor(object):
         dash = '-'
         none = ''
 
-        grid_new = np.zeros([9, 9])
+        grid_new = np.zeros([BOARD_SIZE * 2 - 1, BOARD_SIZE * 2 - 1])
         grid_new[player1_row, player1_col] = 1
         grid_new[player2_row, player2_col] = 2
 
@@ -699,9 +699,9 @@ class Quoridor(object):
                 elif i_reshaped[i][j] == -1:
                     grid_new[(i * 2):((i * 2) + 3), ((j * 2) + 1)] = 4
 
-        for i in range(9):
+        for i in range(BOARD_SIZE * 2 - 1):
             render_row = ""
-            for j in range(9):
+            for j in range(BOARD_SIZE * 2 - 1):
                 if grid_new[i, j] == 0:
                     if i % 2 == 0 and j % 2 == 0:
                         render_row += " . "

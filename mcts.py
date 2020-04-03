@@ -226,11 +226,12 @@ class MCTSPlayer(object):
             if self._is_selfplay:
                 probs = 0.8 * probs + 0.2 * np.random.dirichlet(0.3 * np.ones(len(probs)))
 
-                # move = acts[np.argmax(probs)]
-                move = np.random.choice(acts, p=probs)
+                move = acts[np.argmax(probs)]
+                # move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
             else:
-                move = np.random.choice(acts, p=probs)
+                move = acts[np.argmax(probs)]
+                # move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(-1, state)
 
             if return_prob:
