@@ -523,7 +523,7 @@ class Quoridor(object):
             if self._intersections[ix + 1] == 1:
                 return False
 
-        if column > 0 and column < BOARD_SIZE - 2 and row > 0 and row < BOARD_SIZE - 2:
+        if column > 0 and column < BOARD_SIZE - 1 and row > 0 and row < BOARD_SIZE - 1:
             if self._intersections[ix - 1] == 0 and self._intersections[ix - BOARD_SIZE] != -1 and self._intersections[ix + BOARD_SIZE - 2] != -1:
                 return True
             elif self._intersections[ix + 1] == 0 and self._intersections[ix + 2 - BOARD_SIZE] != -1 and self._intersections[ix + BOARD_SIZE] != -1:
@@ -546,7 +546,7 @@ class Quoridor(object):
             if self._intersections[ix + (BOARD_SIZE - 1)] == -1:
                 return False
 
-        if column > 0 and column < BOARD_SIZE - 2 and row > 0 and row < BOARD_SIZE - 2:
+        if column > 0 and column < BOARD_SIZE - 1 and row > 0 and row < BOARD_SIZE - 1:
             if self._intersections[ix - (BOARD_SIZE - 1)] == 0 and self._intersections[ix - BOARD_SIZE] != 1 and self._intersections[ix - BOARD_SIZE + 2] != 1:
                 return True
             elif self._intersections[ix + (BOARD_SIZE - 1)] == 0 and self._intersections[ix + BOARD_SIZE -2] != 1 and self._intersections[ix + BOARD_SIZE] != 1:
