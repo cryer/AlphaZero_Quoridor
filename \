@@ -28,7 +28,7 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
-        self.n_playout = 200
+        self.n_playout = 400
         self.c_puct = 5
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
@@ -38,13 +38,6 @@ class TrainPipeline(object):
         self.game_batch_num = 1000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
-
-        self.orig_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.h_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.v_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.hv_state_hist = deque(maxlen=HISTORY_LEN * 10)
-
-
 
         self.old_probs = 0
         self.new_probs = 0
@@ -61,9 +54,7 @@ class TrainPipeline(object):
 
     def get_equi_data(self, play_data):
 
-
         extend_data = []
-
         for i, (state, mcts_prob, winner) in enumerate(play_data):
             wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
             dist_state1 = np.reshape(state[8, :BOARD_SIZE, :BOARD_SIZE], (1, BOARD_SIZE, BOARD_SIZE))
@@ -199,32 +190,10 @@ class TrainPipeline(object):
 
             ###########
 
-
-            if len(self.orig_state_hist) == 0:
-                for j in range(HISTORY_LEN):
-                    self.orig_state_hist.extend(state)
-                    self.h_state_hist.extend(h_equi_state)
-                    self.v_state_hist.extend(v_equi_state)
-                    self.hv_state_hist.extend(hv_equi_state)
-            else:
-                self.orig_state_hist.extend(state)
-                self.h_state_hist.extend(h_equi_state)
-                self.v_state_hist.extend(v_equi_state)
-                self.hv_state_hist.extend(hv_equi_state)
-
-
-            state = np.vstack([list(self.orig_state_hist)])
-            h_equi_state = np.vstack([list(self.h_state_hist)])
-            v_equi_state = np.vstack([list(self.v_state_hist)])
-            hv_equi_state = np.vstack([list(self.hv_state_hist)])
-
-
             extend_data.append((state, mcts_prob, winner))
             extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
             extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
             extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
-
-
 
         return extend_data
 

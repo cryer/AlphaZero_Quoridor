@@ -56,12 +56,11 @@ def main():
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet(None).policy_value_fn, c_puct=5, n_playout=400, is_selfplay=0)
+    MCTS_Alpha = A_Player(PolicyValueNet("model_a_25_1.855_2020-04-07").policy_value_fn, c_puct=5, n_playout=400, is_selfplay=0)
     MCTS_Pure = B_Player(c_puct=5, n_playout=50)  #
 
     random = RandomAgent()
     randomMove = RandomMoveAgent()
-
 
     if args.player_type == 1:
         player_types = {1: 'human', 2: 'human'}
@@ -80,7 +79,7 @@ def main():
             print("Set computer type to 1 or 2 for choosing computer!")
             # pygame.quit()
 
-    # game.load(player1, player2)
+    game.load(players[1], players[2])
 
     pygame.init()
 
@@ -99,7 +98,6 @@ def main():
     while not done:
         player_moved = False
 
-        # 定义落子历史
         # move_history = []
 
         pawn_moves, walls = draw_game(game, screen, valid_actions)
@@ -127,7 +125,6 @@ def main():
                             break
                         if player_moved: break
                     # if player_moved: break
-                    # 添加
                     if player_moved:
                         real_action = players[game.current_player].choose_action()
                         # move_history.append(real_action)
@@ -154,7 +151,6 @@ def main():
 
         valid_actions = game.actions()
 
-        # 待改
         if player_types[game.current_player] == 'computer':
             print("Computer %s thinking..." % str(game.current_player))
             tic = time.time()
@@ -190,7 +186,7 @@ def draw_game(game, screen, valid_actions):
     reference_tile = game._positions[game.current_player]  # 当前玩家的位置，一个标量
 
     action_tiles = {}
-    # 遍历所有合法的棋子移动，action是一个int
+
     for action in pawn_actions:
         if action == game._DIRECTIONS['N']:
             action_tiles[reference_tile - BOARD_SIZE] = action

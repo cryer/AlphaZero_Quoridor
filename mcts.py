@@ -15,7 +15,7 @@ class TreeNode(object):
     """
     """
 
-    def __init__(self, parent, prior_p, state, action):
+    def __init__(self, parent, prior_p, state, action, depth=0):
         self._parent = parent
         self._children = {}  #
         self._n_visits = 0
@@ -24,18 +24,20 @@ class TreeNode(object):
         self._u = 0
         self._P = prior_p
         self._action = action
+        self._depth = 0
         # self._game = game
 
-    def expand(self, action_priors, game):
+    def expand(self, action_priors, game, is_selfplay):
         duplicated_node = False
         parent_node = None
         parent_state = None
 
         #zip_length = 0
-        #action_priors = list(action_priors)
-        #noise_prob = np.random.dirichlet(0.3 * np.ones(len(action_priors)))
+        action_priors = list(action_priors)
+        noise_prob = np.random.dirichlet(0.15 * np.ones(len(action_priors)))
 
-        for action, prob in action_priors:
+        for i, (action, prob) in enumerate(action_priors):
+
             """
             if action < 12:
 
@@ -63,12 +65,15 @@ class TreeNode(object):
                         parent_node = parent_node._parent
                         if parent_node is not None:
                             parent_state = parent_node._state
-        
-            if not duplicated_node and action not in self._children:
-                self._children[action] = TreeNode(self, prob, next_state, action)
+
             """
+
+            if is_selfplay and self.is_root():
+                prob = 0.75 * prob + 0.25 * noise_prob[i]
+
+
             if action not in self._children:
-                self._children[action] = TreeNode(self, prob, None, action)
+                self._children[action] = TreeNode(self, prob, None, action, self.depth()+1)
 
     def select(self, c_puct):
         """
@@ -105,6 +110,9 @@ class TreeNode(object):
         """
         return self._children == {}
 
+    def depth(self):
+        return self._depth
+
     def is_root(self):
         return self._parent is None
 
@@ -116,13 +124,14 @@ class MCTS(object):
     """
     """
 
-    def __init__(self, policy_value_fn, c_puct=5, n_playout=1800):
+    def __init__(self, policy_value_fn, c_puct=5, n_playout=1800, is_selfplay=True):
         """
         """
         self._root = TreeNode(None, 1.0, None, None)
         self._policy = policy_value_fn
         self._c_puct = c_puct
         self._n_playout = n_playout
+        self._is_selfplay = is_selfplay
 
     # Fix : get current_player param info when the first simulation started.
     def _playout(self, game, current_player):
@@ -148,7 +157,7 @@ class MCTS(object):
                 leaf_value = -1.0 if game.get_current_player == current_player else 1.0
             else:
             """
-            node.expand(action_probs, game)
+            node.expand(action_probs, game, self._is_selfplay)
         else:
             leaf_value = 1.0 if winner == game.get_current_player() else -1.0  # Fix bug that all winners are current player
             # print(leaf_value)
@@ -169,9 +178,9 @@ class MCTS(object):
         acts, visits = zip(*act_visits)
         act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
 
+        """
         visits = np.array(visits)
 
-        """
         if time_step < TAU_THRES:
             act_probs = visits / visits.sum()
         else:
@@ -202,7 +211,7 @@ class MCTS(object):
 class MCTSPlayer(object):
     #
     def __init__(self, policy_value_function, c_puct=5, n_playout=2000, is_selfplay=1):
-        self.mcts = MCTS(policy_value_function, c_puct, n_playout)
+        self.mcts = MCTS(policy_value_function, c_puct, n_playout, is_selfplay)
         self._is_selfplay = is_selfplay
 
     #
@@ -224,7 +233,7 @@ class MCTSPlayer(object):
             state = game.state()
 
             if self._is_selfplay:
-                # probs = 0.8 * probs + 0.2 * np.random.dirichlet(0.3 * np.ones(len(probs)))
+                # probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.15 * np.ones(len(probs)))
 
                 # move = acts[np.argmax(probs)]
                 move = np.random.choice(acts, p=probs)

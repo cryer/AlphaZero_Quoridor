@@ -76,7 +76,7 @@ class policy_value_net(nn.Module):
         self.conv3 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2 + (8 + (WALL_NUM + 1)*2))
+        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
 
 
     def forward(self,x):
@@ -103,25 +103,16 @@ class policy_value_net(nn.Module):
 
         return policy_out,value_out
 
-# device = torch.device("cpu")
-# x = torch.Tensor(4,26,9,9).to(device)
-# net = policy_value_net(BasicBlock,26,64).to(device)
-# print(net)
-# value_out,policy_out = net(x)
-# print("value:",value_out.size())
-# print("policy:",policy_out.size())
-
-
 class PolicyValueNet(object):
     def __init__(self,model_file=None, use_gpu=True):
         self.use_gpu = use_gpu
-        self.l2_const = 1e-4  # 
+        self.l2_const = 1e-4  #
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock, (8 + (WALL_NUM+1) * 2),NN_DIM).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN,NN_DIM).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock, (8 + (WALL_NUM+1) * 2),NN_DIM)
+            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN,NN_DIM)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 
@@ -147,8 +138,8 @@ class PolicyValueNet(object):
     def policy_value_fn(self, game):
         """
         """
-        legal_positions = game.actions()  # 
-        current_state = np.ascontiguousarray(game.state()).reshape([1, 8 + ((WALL_NUM+1) * 2), BOARD_SIZE, BOARD_SIZE])
+        legal_positions = game.actions()  #
+        current_state = np.ascontiguousarray(game.state()).reshape([1, 10 * HISTORY_LEN, BOARD_SIZE, BOARD_SIZE])
         if self.use_gpu:
             # device = torch.device("cuda:0")
             log_act_probs, value = self.policy_value_net(Variable(torch.from_numpy(current_state)).cuda().float())
@@ -179,16 +170,16 @@ class PolicyValueNet(object):
         self.optimizer.zero_grad()
         set_learning_rate(self.optimizer, lr)
 
-        # 
+        #
         log_act_probs, value = self.policy_value_net(state_batch)
         6
         value_loss = F.mse_loss(value.view(-1), winner_batch)
 
         # print(mcts_probs.shape, log_act_probs.shape)
-        policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))        
+        policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))
 
         loss = value_loss + policy_loss
-        # 
+        #
         loss.backward()
         self.optimizer.step()
         #
