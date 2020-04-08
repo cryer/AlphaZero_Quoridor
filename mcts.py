@@ -27,7 +27,7 @@ class TreeNode(object):
         self._depth = 0
         # self._game = game
 
-    def expand(self, action_priors, game, is_selfplay):
+    def expand(self, action_priors, is_selfplay):
         duplicated_node = False
         parent_node = None
         parent_state = None
@@ -134,7 +134,7 @@ class MCTS(object):
         self._is_selfplay = is_selfplay
 
     # Fix : get current_player param info when the first simulation started.
-    def _playout(self, game, current_player):
+    def _playout(self, game):
         """
         """
         node = self._root
@@ -157,7 +157,7 @@ class MCTS(object):
                 leaf_value = -1.0 if game.get_current_player == current_player else 1.0
             else:
             """
-            node.expand(action_probs, game, self._is_selfplay)
+            node.expand(action_probs, self._is_selfplay)
         else:
             leaf_value = 1.0 if winner == game.get_current_player() else -1.0  # Fix bug that all winners are current player
             # print(leaf_value)
@@ -172,7 +172,7 @@ class MCTS(object):
             game_copy = copy.deepcopy(game)
             # state = game.state()
             # state_copy = copy.deepcopy(state)
-            self._playout(game_copy, game_copy.get_current_player())
+            self._playout(game_copy)
 
         act_visits = [(act, node._n_visits) for act, node in self._root._children.items()]
         acts, visits = zip(*act_visits)

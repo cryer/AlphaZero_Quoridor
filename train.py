@@ -119,7 +119,7 @@ class TrainPipeline(object):
 
                     writer.add_scalar("Val Loss/train", valloss.item(), i)
                     writer.add_scalar("Policy Loss/train", polloss.item(), i)
-                    writer.add_scalar("Entory/train", entropy, i)
+                    writer.add_scalar("Entropy/train", entropy, i)
 
                 if (i + 1) % self.check_freq == 0:
                     count += 1

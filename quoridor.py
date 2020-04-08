@@ -38,9 +38,9 @@ class Quoridor(object):
         return self.current_player
 
     # reset and initialize single game
-    def reset(self):
-        self.current_player = 1
-        self.last_player = -1
+    def reset(self, first_player=1, second_player=2):
+        self.current_player = first_player
+        self.last_player = second_player
 
         # Initialize Tiles
         self.tiles = np.zeros(BOARD_SIZE ** 2)
@@ -784,7 +784,6 @@ class Quoridor(object):
 
         time_step = 0
 
-
         while(1):
 
             time_step += 1
@@ -792,10 +791,10 @@ class Quoridor(object):
             tic = time.time()
             move, move_probs = player.choose_action(self, temp=temp, return_prob=1, time_step=time_step)
             toc = time.time()
+            print("turn %s" % time_step)
             print('[Move probs]\n', move_probs[:12])
             print('[Wall probs]\n', move_probs[12:])
             print("player %s chose move : %s, prob: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
-
 
             states.append(self.state())
             mcts_probs.append(move_probs)
@@ -825,3 +824,63 @@ class Quoridor(object):
                     else:
                         print("Game end. Tie")
                 return winner, zip(states, mcts_probs, winners_z)
+            else:
+                if time_step > TURN_LIMIT:
+                    print("Reached Game Limit. Draw")
+
+                    winners_z = np.zeros(len(current_players))
+                    winners_z[np.array(current_players) == winner] = 0.0  #
+                    winners_z[np.array(current_players) != winner] = 0.0  #
+
+                    player.reset_player()
+                    return 0, zip(states, mcts_probs, winners_z)
+
+    def start_test_play(self, alpha_player, pure_player, is_shown=0, temp=1e-3, first=1):
+        if first == 1 or first == 3:
+            self.reset(first_player=1, second_player=2)
+        else:
+            self.reset(first_player=2, second_player=1)
+
+        time_step = 0
+
+        while (1):
+
+            time_step += 1
+
+            tic = time.time()
+            if self.current_player == 1:
+                move, move_probs = alpha_player.choose_action(self, temp=temp, return_prob=1,
+                                                              time_step=time_step)
+                print("turn %s" % time_step)
+                print('[Move probs]\n', move_probs[:12])
+                print('[Wall probs]\n', move_probs[12:])
+                print("alpha_player chose move : %s, prob: %.3f" % (move, move_probs[move]))
+            else:
+                move = pure_player.choose_action(self)
+                print("pure_player chose move : %s" % (move))
+            toc = time.time()
+
+            print("spend: %.2f seconds" % (toc - tic))
+
+            self.step(move)
+
+            dist1, dist2 = self.get_shortest_path()
+            print("Player 1 Shortest Path: {}, Player 2 Shortest Path: {}".format(dist1, dist2))
+
+            self.print_board()
+            # if is_shown:
+            #     self.graphic(self.board, p1, p2)
+            end, winner = self.has_a_winner()
+
+            if end:
+                alpha_player.reset_player()
+                pure_player.reset_player()
+
+                return winner
+            else:
+                if time_step > TURN_LIMIT:
+                    print("Reached Game Limit.")
+
+                    alpha_player.reset_player()
+                    pure_player.reset_player()
+                    return 0

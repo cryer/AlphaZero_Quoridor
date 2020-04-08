@@ -273,9 +273,8 @@ class TrainPipeline(object):
 
                 writer.add_scalar("Val Loss/train", valloss.item(), iter_count)
                 writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
-                writer.add_scalar("Entory/train", entropy, iter_count)
+                writer.add_scalar("Entropy/train", entropy, iter_count)
                 writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
-
 
                 iter_count += 1
 
