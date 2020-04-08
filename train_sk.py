@@ -9,6 +9,7 @@ from quoridor import Quoridor
 from policy_value_net import PolicyValueNet
 
 from mcts import MCTSPlayer
+from pure_mcts import MCTSPlayer as MCTSPure
 
 
 from torch.utils.tensorboard import SummaryWriter
@@ -28,7 +29,7 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
-        self.n_playout = 200
+        self.n_playout = 400
         self.c_puct = 5
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
@@ -37,7 +38,7 @@ class TrainPipeline(object):
         self.check_freq = 5
         self.game_batch_num = 1000
         self.best_win_ratio = 0.0
-        self.pure_mcts_playout_num = 1000
+        self.pure_mcts_playout_num = 100
 
         self.orig_state_hist = deque(maxlen=HISTORY_LEN * 10)
         self.h_state_hist = deque(maxlen=HISTORY_LEN * 10)
@@ -294,8 +295,30 @@ class TrainPipeline(object):
         #        kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
         return valloss_mean, polloss_mean, entropy_mean
 
+
+
+    def policy_evaluate(self, n_games=20):
+        current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn, c_puct=self.c_puct,
+                                      n_playout=self.n_playout, is_selfplay=False)
+
+        pure_mcts_player = MCTSPure(c_puct=5, n_playout=self.pure_mcts_playout_num)
+
+        win_cnt = defaultdict(int)
+        for i in range(n_games):
+            winner = self.game.start_test_play(current_mcts_player, pure_mcts_player, is_shown=0, first= i % 2)
+            win_cnt[winner] += 1
+
+        win_ratio = 1.0 * (win_cnt[1] + 0.5*win_cnt[-1]) / n_games
+        print("num_playouts:{}, win: {}, lose: {}, tie: {}".format(self.pure_mcts_playout_num, win_cnt[1], win_cnt[2], win_cnt[-1]))
+        return win_ratio
+
+
     def run(self):
         try:
+
+            win_ratio = self.policy_evaluate()
+
+
             self.collect_selfplay_data(50)
             count = 0
             for i in range(self.game_batch_num):
@@ -304,6 +327,9 @@ class TrainPipeline(object):
                 if len(self.data_buffer) > BATCH_SIZE:
                     valloss, polloss, entropy = self.policy_update()
                     print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY: %0.3f" % entropy)
+                    win_ratio = self.policy_evaluate()
+                    writer.add_scalar("Win Ratio against pure MCTS", win_ratio, i)
+
 
                     #writer.add_scalar("Val Loss/train", valloss.item(), i)
                     #writer.add_scalar("Policy Loss/train", polloss.item(), i)
