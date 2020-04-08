@@ -149,7 +149,6 @@ class MCTS(object):
         action_probs, leaf_value = self._policy(game)
         end, winner = game.has_a_winner()
 
-
         if not end:
             # Add an incompleted code to make pawn avoid dead-end section.
             """
@@ -160,8 +159,6 @@ class MCTS(object):
             node.expand(action_probs, self._is_selfplay)
         else:
             leaf_value = 1.0 if winner == game.get_current_player() else -1.0  # Fix bug that all winners are current player
-            # print(leaf_value)
-        # print("call update")
 
         node.update_recursive(-leaf_value)
 
@@ -231,14 +228,34 @@ class MCTSPlayer(object):
             acts, probs = self.mcts.get_move_probs(game, temp, time_step)
             move_probs[list(acts)] = probs
             state = game.state()
+            print("dist history")
+            print(state[8:10][0][0][0])
+            print(state[18:20][0][0][0])
+            print(state[28:30][0][0][0])
+            print(state[38:40][0][0][0])
+            print(state[48:50][0][0][0])
+            print(state[58:60][0][0][0])
+            print(state[68:70][0][0][0])
+            print(state[78:80][0][0][0])
+
+            print("player1 history")
+            print(state[3])
+            print(state[13])
+            print(state[23])
+            print(state[33])
+            print(state[43])
+            print(state[53])
+            print(state[63])
+            print(state[73])
 
             if self._is_selfplay:
                 probs = 0.9 * probs + 0.1 * np.random.dirichlet(0.3 * np.ones(len(probs)))
-
+                print(probs)
                 # move = acts[np.argmax(probs)]
                 move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(move, state)
             else:
+                print(probs)
                 move = acts[np.argmax(probs)]
                 # move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(-1, state)

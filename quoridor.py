@@ -23,10 +23,6 @@ class Quoridor(object):
         self.n_players = 2
         self.players = [1, 2]  #
         self.reset()
-        self.dist1 = -1
-        self.dist2 = -1
-
-        self.states = deque(maxlen=HISTORY_LEN * 10)
 
     # load player's info (human or computer)
     def load(self, p1, p2):
@@ -68,6 +64,11 @@ class Quoridor(object):
         self._intersections = np.zeros((BOARD_SIZE - 1) ** 2)
 
         self._player_walls_remaining = {1: WALL_NUM, 2: WALL_NUM}
+
+        self.dist1 = BOARD_SIZE - 1
+        self.dist2 = BOARD_SIZE - 1
+
+        self.states = deque(maxlen=HISTORY_LEN * 10)
 
     def state(self):
         """Returns a set of 5x5 planes that represent the game state.
@@ -257,10 +258,12 @@ class Quoridor(object):
         game_over = False
         winner = None
 
+        """
         if self.current_player == 1 and self.dist1 == 1:
             return True, 1
         elif self.current_player == 2 and self.dist2 == 1:
             return True, 2
+        """
 
         if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
             return True, 2
