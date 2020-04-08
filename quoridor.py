@@ -222,6 +222,11 @@ class Quoridor(object):
 
         self.dist1, self.dist2 = self.get_shortest_path()
 
+        if self.dist1 == -1 or self.dist2 == -1:
+            print("wall action is invalid")
+            self.print_board()
+            exit(0)
+
         self.rotate_players()
         """
         game_over, winner = self.has_a_winner()
@@ -252,19 +257,19 @@ class Quoridor(object):
         game_over = False
         winner = None
 
-        if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
-            winner = 2
-            game_over = True
-        elif self._positions[1] < BOARD_SIZE:
-            winner = 1
-            game_over = True
+        if self.current_player == 1 and self.dist1 == 1:
+            return True, 1
+        elif self.current_player == 2 and self.dist2 == 1:
+            return True, 2
 
+        if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
+            return True, 2
+        elif self._positions[1] < BOARD_SIZE:
+            return True, 1
         if self.dist1 - self.dist2 > 1 and self._player_walls_remaining[1] == 0:
-            winner = 2
-            game_over = True
+            return True, 2
         elif self.dist2 - self.dist1 > 1 and self._player_walls_remaining[2] == 0:
-            winner = 1
-            game_over = True
+            return True, 1
 
         return game_over, winner
 
@@ -523,11 +528,6 @@ class Quoridor(object):
             if self._intersections[ix + 1] == 1:
                 return False
 
-        if column > 0 and column < BOARD_SIZE - 2 and row > 0 and row < BOARD_SIZE - 2:
-            if self._intersections[ix - 1] == 0 and self._intersections[ix - BOARD_SIZE] != -1 and self._intersections[ix + BOARD_SIZE - 2] != -1:
-                return True
-            elif self._intersections[ix + 1] == 0 and self._intersections[ix + 2 - BOARD_SIZE] != -1 and self._intersections[ix + BOARD_SIZE] != -1:
-                return True
 
         return not self._blocks_path(ix, self.HORIZONTAL)
 
@@ -545,12 +545,6 @@ class Quoridor(object):
         if row != BOARD_SIZE - 2:
             if self._intersections[ix + (BOARD_SIZE - 1)] == -1:
                 return False
-
-        if column > 0 and column < BOARD_SIZE - 2 and row > 0 and row < BOARD_SIZE - 2:
-            if self._intersections[ix - (BOARD_SIZE - 1)] == 0 and self._intersections[ix - BOARD_SIZE] != 1 and self._intersections[ix - BOARD_SIZE + 2] != 1:
-                return True
-            elif self._intersections[ix + (BOARD_SIZE - 1)] == 0 and self._intersections[ix + BOARD_SIZE -2] != 1 and self._intersections[ix + BOARD_SIZE] != 1:
-                return True
 
 
         return not self._blocks_path(ix, self.VERTICAL)
@@ -699,7 +693,7 @@ class Quoridor(object):
 
             dist += 1
 
-        return target_visited, dist
+        return target_visited, -1
 
 
 

@@ -34,7 +34,7 @@ class TreeNode(object):
 
         #zip_length = 0
         action_priors = list(action_priors)
-        noise_prob = np.random.dirichlet(0.15 * np.ones(len(action_priors)))
+        noise_prob = np.random.dirichlet(0.3 * np.ones(len(action_priors)))
 
         for i, (action, prob) in enumerate(action_priors):
 
@@ -69,7 +69,7 @@ class TreeNode(object):
             """
 
             if is_selfplay and self.is_root():
-                prob = 0.75 * prob + 0.25 * noise_prob[i]
+                prob = 0.9 * prob + 0.1 * noise_prob[i]
 
 
             if action not in self._children:
@@ -224,20 +224,20 @@ class MCTSPlayer(object):
 
     # Choose an action during the play
     def choose_action(self, game, temp=1e-3, return_prob=0, time_step=0):
-        sensible_moves = game.actions()  # 获取所有可行的落子
-        move_probs = np.zeros(12 + (BOARD_SIZE - 1) ** 2 * 2)  # 获取落子的概率，由神经网络输出
+        sensible_moves = game.actions()
+        move_probs = np.zeros(12 + (BOARD_SIZE - 1) ** 2 * 2)
 
-        if len(sensible_moves) > 0:  # 棋盘未耗尽时
-            acts, probs = self.mcts.get_move_probs(game, temp, time_step)  # 获取落子以及对应的落子概率
-            move_probs[list(acts)] = probs  # 将概率转到move_probs列表中
+        if len(sensible_moves) > 0:
+            acts, probs = self.mcts.get_move_probs(game, temp, time_step)
+            move_probs[list(acts)] = probs
             state = game.state()
 
             if self._is_selfplay:
-                # probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.15 * np.ones(len(probs)))
+                probs = 0.9 * probs + 0.1 * np.random.dirichlet(0.3 * np.ones(len(probs)))
 
                 # move = acts[np.argmax(probs)]
                 move = np.random.choice(acts, p=probs)
-                self.mcts.update_with_move(move, state)  # 更新根节点，并且复用子树
+                self.mcts.update_with_move(move, state)
             else:
                 move = acts[np.argmax(probs)]
                 # move = np.random.choice(acts, p=probs)
