@@ -868,7 +868,7 @@ class Quoridor(object):
             self.step(move)
 
             dist1, dist2 = self.get_shortest_path()
-            print("Player 1 Shortest Path: {}, Player 2 Shortest Path: {}".format(dist1, dist2))
+            print("Player 1 Shortest Path: {} Remaining Walls: {}, Player 2 Shortest Path: {} Remaining Walls: {}".format(dist1, self._player_walls_remaining[1],  dist2, self._player_walls_remaining[2] ))
 
             self.print_board()
             # if is_shown:

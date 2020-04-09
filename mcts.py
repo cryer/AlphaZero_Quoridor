@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import random
 
 
 from constant import *
@@ -25,6 +26,7 @@ class TreeNode(object):
         self._P = prior_p
         self._action = action
         self._depth = 0
+        self._discount_factor = 0.997
         # self._game = game
 
     def expand(self, action_priors, is_selfplay):
@@ -93,7 +95,7 @@ class TreeNode(object):
 
 
         if self._parent:
-            self._parent.update_recursive(-reward)
+            self._parent.update_recursive(-reward  * self._discount_factor)
 
         self.update(reward)
 

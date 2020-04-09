@@ -30,7 +30,7 @@ class TrainPipeline(object):
         self.lr_multiplier = 1.0
         self.temp = 1.0
         self.n_playout = 400
-        self.c_puct = 5
+        self.c_puct = 1.5
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 1
@@ -297,7 +297,7 @@ class TrainPipeline(object):
 
 
 
-    def policy_evaluate(self, n_games=20):
+    def policy_evaluate(self, n_games=10):
         current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn, c_puct=self.c_puct,
                                       n_playout=self.n_playout, is_selfplay=False)
 
@@ -307,6 +307,7 @@ class TrainPipeline(object):
         for i in range(n_games):
             winner = self.game.start_test_play(current_mcts_player, pure_mcts_player, is_shown=0, first= i % 2)
             win_cnt[winner] += 1
+            print("{}th evaluation game finished out of {} games".format(i, n_games))
 
         win_ratio = 1.0 * (win_cnt[1] + 0.5*win_cnt[-1]) / n_games
         print("num_playouts:{}, win: {}, lose: {}, tie: {}".format(self.pure_mcts_playout_num, win_cnt[1], win_cnt[2], win_cnt[-1]))
@@ -316,7 +317,7 @@ class TrainPipeline(object):
     def run(self):
         try:
 
-            win_ratio = self.policy_evaluate()
+            win_ratio = self.policy_evaluate(n_games=1)
 
 
             self.collect_selfplay_data(50)
