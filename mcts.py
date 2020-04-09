@@ -76,13 +76,12 @@ class TreeNode(object):
                 self._children[action] = TreeNode(self, prob, None, action, self.depth()+1)
 
     def select(self, c_puct):
-        """
-        """
 
-        #if np.random.random_sample() < 0.7:
-        #    return reduce(lambda x, y: x if (x[0] < 2 and y[0] >= 2) else x if ((x[0] < 2 and y[0] < 2) and (x[1].get_value(c_puct) > y[1].get_value(c_puct))) else x if (x[1].get_value(c_puct) > y[1].get_value(c_puct)) else y, self._children.items())
+        max_value = max([act_node[1].get_value(c_puct) for act_node in self._children.items()])
+        max_acts = [act_node for act_node in self._children.items() if act_node[1].get_value(c_puct) == max_value ]
 
-        return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
+        return random.choice(max_acts)
+        #return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
 
     def update(self, leaf_value):
         """

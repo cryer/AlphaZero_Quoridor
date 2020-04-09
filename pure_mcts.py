@@ -2,7 +2,7 @@
 import numpy as np
 import copy
 from operator import itemgetter
-
+import random
 
 def rollout_policy_fn(game):
     # 得到一个合法动作空间大小的随机概率分布
@@ -31,7 +31,12 @@ class TreeNode(object):
                 self._children[action] = TreeNode(self, prob)
 
     def select(self, c_puct):
-        return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
+
+        max_value = max([act_node[1].get_value(c_puct) for act_node in self._children.items()])
+        max_acts = [act_node for act_node in self._children.items() if act_node[1].get_value(c_puct) == max_value ]
+
+        return random.choice(max_acts)
+        # return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
 
     def update(self, leaf_value):
         # Count visit.
