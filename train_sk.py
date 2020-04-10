@@ -29,7 +29,7 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
-        self.n_playout = 400
+        self.n_playout = 100
         self.c_puct = 1.5
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
@@ -328,9 +328,6 @@ class TrainPipeline(object):
                 if len(self.data_buffer) > BATCH_SIZE:
                     valloss, polloss, entropy = self.policy_update()
                     print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY: %0.3f" % entropy)
-                    win_ratio = self.policy_evaluate()
-                    writer.add_scalar("Win Ratio against pure MCTS", win_ratio, i)
-
 
                     #writer.add_scalar("Val Loss/train", valloss.item(), i)
                     #writer.add_scalar("Policy Loss/train", polloss.item(), i)
@@ -341,6 +338,9 @@ class TrainPipeline(object):
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
                     # Add generation to filename
+                    win_ratio = self.policy_evaluate()
+                    writer.add_scalar("Win Ratio against pure MCTS", win_ratio, i)
+
                     self.policy_value_net.save_model('model_a_' + str(count) + '_' + str("%0.3f_" % (valloss+polloss) + str(time.strftime('%Y-%m-%d', time.localtime(time.time())))))
         except KeyboardInterrupt:
             print('\n\rquit')

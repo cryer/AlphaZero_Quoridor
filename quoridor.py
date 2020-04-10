@@ -453,15 +453,15 @@ class Quoridor(object):
             if w_border:
                 nw_intersection = VERTICAL
                 sw_intersection = VERTICAL
-                se_intersection = intersections[current_tile]
+                se_intersection = intersections[current_tile - location_row]
             elif e_border:
                 nw_intersection = HORIZONTAL
                 se_intersection = VERTICAL
-                sw_intersection = intersections[current_tile - 1]
+                sw_intersection = intersections[current_tile - location_row - 1]
             else:
                 nw_intersection = HORIZONTAL
-                sw_intersection = intersections[current_tile - 1]
-                se_intersection = intersections[current_tile]
+                sw_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = intersections[current_tile - location_row]
         elif s_border:
             location_row = BOARD_SIZE - 1
             sw_intersection = HORIZONTAL
@@ -490,7 +490,7 @@ class Quoridor(object):
             ne_intersection = VERTICAL
             se_intersection = VERTICAL
             sw_intersection = intersections[current_tile - location_row - 1]
-            nw_intersection = intersections[(current_tile - BOARD_SIZE) - (location_row - 1) - 1]
+            nw_intersection = intersections[(current_tile - BOARD_SIZE) - location_row]
 
         # No borders
         else:

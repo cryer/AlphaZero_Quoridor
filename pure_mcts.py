@@ -24,6 +24,7 @@ class TreeNode(object):
         self._Q = 0
         self._u = 0
         self._P = prior_p
+        self._discount_factor = 0.997
 
     def expand(self, action_priors):
         for action, prob in action_priors:
@@ -47,7 +48,7 @@ class TreeNode(object):
     def update_recursive(self, leaf_value):
         # If it is not root, this node's parent should be updated first.
         if self._parent:
-            self._parent.update_recursive(-leaf_value)
+            self._parent.update_recursive(-leaf_value * self._discount_factor)
         self.update(leaf_value)
 
     def get_value(self, c_puct):

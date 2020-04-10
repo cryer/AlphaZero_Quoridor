@@ -13,12 +13,14 @@ class TestTrainedAgent(object):
         self.temp = 1.0
         self.c_puct = 5
         self.play_batch_size = 1
-        self.alpha_playout = 100
-        self.pure_playout = 100
+        self.alpha_playout = 400
+        self.pure_playout = 200
         self.first = first_player
 
         self.alpha_player = A_Player(PolicyValueNet(model_file=init_model).policy_value_fn, c_puct=5,
                                      n_playout=self.alpha_playout, is_selfplay=0)
+
+
         self.pure_player = B_Player(c_puct=5, n_playout=self.pure_playout)  #
         self.alpha_win_total = 0
         self.alpha_win_first = 0
