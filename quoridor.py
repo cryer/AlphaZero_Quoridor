@@ -516,6 +516,106 @@ class Quoridor(object):
 
         return valid
 
+
+    def _num_of_touched_walls(self, ix, direction):
+
+        column = ix % (BOARD_SIZE - 1)
+        row = ix // (BOARD_SIZE - 1)
+
+        count = 0
+
+        horizontal_test_idx = []
+        vertical_test_idx = []
+
+
+        if direction == HORIZONTAL:
+            if column == 0 or column == BOARD_SIZE - 2:
+                count += 1
+
+            if column >= 2:
+                horizontal_test_idx += [ix - 2]
+
+            if column <= BOARD_SIZE - 4:
+                horizontal_test_idx += [ix + 2]
+
+
+            if row != 0:
+                vertical_test_idx += [ix - BOARD_SIZE + 1]
+
+            if row != BOARD_SIZE - 2:
+                vertical_test_idx += [ix + BOARD_SIZE - 1]
+
+            if column != 0:
+                vertical_test_idx += [ix - 1]
+                if row != 0:
+                    vertical_test_idx += [ix - BOARD_SIZE]
+                if row != BOARD_SIZE - 2:
+                    vertical_test_idx += [ix + BOARD_SIZE - 2]
+
+            if column != BOARD_SIZE - 2:
+                vertical_test_idx += [ix + 1]
+                if row != 0:
+                    vertical_test_idx += [ix - BOARD_SIZE + 2]
+                if row != BOARD_SIZE - 2:
+                    vertical_test_idx += [ix + BOARD_SIZE]
+
+
+            for idx in vertical_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == VERTICAL:
+                        count += 1
+
+            for idx in horizontal_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == HORIZONTAL:
+                        count += 1
+
+        elif direction == VERTICAL:
+            if row == 0 or row == BOARD_SIZE - 2:
+                count += 1
+
+            if row >= 2:
+                vertical_test_idx += [ix - 2*(BOARD_SIZE -1 )]
+
+            if row <= BOARD_SIZE - 4:
+                vertical_test_idx += [ix + 2 * (BOARD_SIZE - 1)]
+
+
+            if column != 0:
+                horizontal_test_idx += [ix - 1]
+
+            if column != BOARD_SIZE - 2:
+                horizontal_test_idx += [ix + 1]
+
+            if row != 0:
+                horizontal_test_idx += [ix - BOARD_SIZE + 1]
+                if column != 0:
+                    horizontal_test_idx += [ix - BOARD_SIZE]
+                if column != BOARD_SIZE - 2:
+                    horizontal_test_idx += [ix - BOARD_SIZE + 2]
+
+            if row != BOARD_SIZE - 2:
+                horizontal_test_idx += [ix + BOARD_SIZE - 1]
+                if column != 0:
+                    horizontal_test_idx += [ix + BOARD_SIZE - 2]
+                if column != BOARD_SIZE - 2:
+                    horizontal_test_idx += [ix + BOARD_SIZE]
+
+
+            for idx in vertical_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == VERTICAL:
+                        count += 1
+
+            for idx in horizontal_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == HORIZONTAL:
+                        count += 1
+
+
+        return count
+
+
     def _validate_horizontal(self, ix):
         column = ix % (BOARD_SIZE - 1)
         row = ix // (BOARD_SIZE - 1)
@@ -524,13 +624,15 @@ class Quoridor(object):
             return False
 
         if column != 0:
-            if self._intersections[ix - 1] == 1:
+            if self._intersections[ix - 1] == HORIZONTAL:
                 return False
 
         if column != BOARD_SIZE - 2:
-            if self._intersections[ix + 1] == 1:
+            if self._intersections[ix + 1] == HORIZONTAL:
                 return False
 
+        if self._num_of_touched_walls(ix, HORIZONTAL) < 2:
+            return True
 
         return not self._blocks_path(ix, self.HORIZONTAL)
 
@@ -542,13 +644,15 @@ class Quoridor(object):
             return False
 
         if row != 0:
-            if self._intersections[ix - (BOARD_SIZE - 1)] == -1:
+            if self._intersections[ix - (BOARD_SIZE - 1)] == VERTICAL:
                 return False
 
         if row != BOARD_SIZE - 2:
-            if self._intersections[ix + (BOARD_SIZE - 1)] == -1:
+            if self._intersections[ix + (BOARD_SIZE - 1)] == VERTICAL:
                 return False
 
+        if self._num_of_touched_walls(ix, VERTICAL) < 2:
+            return True
 
         return not self._blocks_path(ix, self.VERTICAL)
 
