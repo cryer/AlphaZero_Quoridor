@@ -11,17 +11,17 @@ class TestTrainedAgent(object):
     def __init__(self, init_model=None, first_player=1):
         self.game = Quoridor()
         self.temp = 1.0
-        self.c_puct = 5
+        self.c_puct = 1
         self.play_batch_size = 1
-        self.alpha_playout = 400
+        self.alpha_playout = 200
         self.pure_playout = 200
         self.first = first_player
 
-        self.alpha_player = A_Player(PolicyValueNet(model_file=init_model).policy_value_fn, c_puct=5,
-                                     n_playout=self.alpha_playout, is_selfplay=0)
+        self.alpha_player = A_Player(PolicyValueNet(model_file=init_model).policy_value_fn, c_puct=self.c_puct,
+                                     n_playout=self.alpha_playout, is_selfplay=False)
 
 
-        self.pure_player = B_Player(c_puct=5, n_playout=self.pure_playout)  #
+        self.pure_player = B_Player(c_puct=self.c_puct, n_playout=self.pure_playout)  #
         self.alpha_win_total = 0
         self.alpha_win_first = 0
         self.alpha_draw_total = 0
@@ -74,5 +74,5 @@ class TestTrainedAgent(object):
 if __name__ == '__main__':
     # init_model : alpha zero model file name
     # first_player : 1 - alpha zero, 2 - pure mcts, 3 - change first player when every game finish
-    test_trained_agent = TestTrainedAgent(init_model=None, first_player=3)
+    test_trained_agent = TestTrainedAgent(init_model="model_a_32_1.920_2020-04-13", first_player=3)
     test_trained_agent.run(100)

@@ -71,7 +71,7 @@ class TreeNode(object):
             """
 
             if is_selfplay and self.is_root():
-                prob = 0.9 * prob + 0.1 * noise_prob[i]
+                prob = 0.75 * prob + 0.25 * noise_prob[i]
 
 
             if action not in self._children:
@@ -172,9 +172,9 @@ class MCTS(object):
             # state_copy = copy.deepcopy(state)
             self._playout(game_copy)
 
-        act_visits = [(act, node._n_visits) for act, node in self._root._children.items()]
-        acts, visits = zip(*act_visits)
-        act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
+        act_visits = [(act, node._n_visits, node._Q) for act, node in self._root._children.items()]
+        acts, visits, q_values = zip(*act_visits)
+        act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10 ))
 
         """
         visits = np.array(visits)
@@ -193,7 +193,7 @@ class MCTS(object):
         # print("-" * 30)
         # print("q_vals : ", q_vals)
         # print("-" * 30)
-        return acts, act_probs
+        return acts, act_probs, q_values
 
     def update_with_move(self, last_move, state):
         if last_move in self._root._children:
@@ -224,15 +224,18 @@ class MCTSPlayer(object):
     def choose_action(self, game, temp=1e-3, return_prob=0, time_step=0):
         sensible_moves = game.actions()
         move_probs = np.zeros(12 + (BOARD_SIZE - 1) ** 2 * 2)
+        q_vals = np.zeros(12 + (BOARD_SIZE - 1) ** 2 * 2)
+
 
         if len(sensible_moves) > 0:
-            acts, probs = self.mcts.get_move_probs(game, temp, time_step)
+            acts, probs, q_values = self.mcts.get_move_probs(game, temp, time_step)
             move_probs[list(acts)] = probs
+            q_vals[list(acts)] = q_values
             state = game.state()
 
             if self._is_selfplay:
-                probs = 0.9 * probs + 0.1 * np.random.dirichlet(0.3 * np.ones(len(probs)))
-                print(probs)
+                # probs = 0.9 * probs + 0.1 * np.random.dirichlet(0.3 * np.ones(len(probs)))
+                # print(probs)
                 # move = acts[np.argmax(probs)]
                 move = np.random.choice(acts, p=probs)
                 self.mcts.update_with_move(move, state)
@@ -243,7 +246,7 @@ class MCTSPlayer(object):
                 self.mcts.update_with_move(-1, state)
 
             if return_prob:
-                return move, move_probs
+                return move, move_probs, q_vals
             else:
                 return move
         else:

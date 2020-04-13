@@ -29,22 +29,16 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
-        self.n_playout = 100
-        self.c_puct = 1.5
+        self.n_playout = 200
+        self.c_puct = 1
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 1
+        self.play_batch_size = 5
         self.kl_targ = 0.02
         self.check_freq = 5
         self.game_batch_num = 1000
         self.best_win_ratio = 0.0
-        self.pure_mcts_playout_num = 100
-
-        self.orig_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.h_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.v_state_hist = deque(maxlen=HISTORY_LEN * 10)
-        self.hv_state_hist = deque(maxlen=HISTORY_LEN * 10)
-
+        self.pure_mcts_playout_num = 200
 
 
         self.old_probs = 0
@@ -62,10 +56,17 @@ class TrainPipeline(object):
 
     def get_equi_data(self, play_data):
 
+        self.orig_state_hist = deque(maxlen=HISTORY_LEN * 10)
+        self.h_state_hist = deque(maxlen=HISTORY_LEN * 10)
+        self.v_state_hist = deque(maxlen=HISTORY_LEN * 10)
+        self.hv_state_hist = deque(maxlen=HISTORY_LEN * 10)
 
         extend_data = []
 
         for i, (state, mcts_prob, winner) in enumerate(play_data):
+
+            state = state[-10:,:,:]
+
             wall_state = state[:3,:BOARD_SIZE - 1,:BOARD_SIZE - 1]
             dist_state1 = np.reshape(state[8, :BOARD_SIZE, :BOARD_SIZE], (1, BOARD_SIZE, BOARD_SIZE))
             dist_state2 = np.reshape(state[9, :BOARD_SIZE, :BOARD_SIZE], (1, BOARD_SIZE, BOARD_SIZE))
@@ -221,10 +222,9 @@ class TrainPipeline(object):
 
 
             extend_data.append((state, mcts_prob, winner))
-            extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
-            extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
-            extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
-
+            # extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
+            # extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
+            # extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
 
 
         return extend_data
@@ -317,7 +317,7 @@ class TrainPipeline(object):
     def run(self):
         try:
 
-            win_ratio = self.policy_evaluate(n_games=1)
+            # win_ratio = self.policy_evaluate(n_games=1)
 
 
             self.collect_selfplay_data(50)

@@ -65,6 +65,9 @@ class Quoridor(object):
 
         self._player_walls_remaining = {1: WALL_NUM, 2: WALL_NUM}
 
+
+        self._player_waste_move = {1: 2, 2: 2}
+
         self.dist1 = BOARD_SIZE - 1
         self.dist2 = BOARD_SIZE - 1
 
@@ -162,6 +165,7 @@ class Quoridor(object):
 
         state = np.vstack([list(self.states)])
 
+
         return state
 
 
@@ -182,6 +186,19 @@ class Quoridor(object):
         return dist1, dist2
 
 
+    def path_to_goal(self, location, player):
+
+        target = 0 if player == 1 else BOARD_SIZE - 1
+
+
+        intersections = self._intersections
+
+        _, dist = self._bfs_to_goal2(intersections, target, location, location, player=player)
+
+        return dist
+
+
+
     def actions(self):
         player = self.current_player
         location = self._positions[player]
@@ -192,7 +209,18 @@ class Quoridor(object):
         #
         pawn_actions = self._valid_pawn_actions(location=location,
                                                 opponent_loc=opponent_loc, walls=walls, player=player)
-        #
+
+        cur_dis = self.dist1 if player == 1 else self.dist2
+
+        new_pawn_actions = []
+        if self._player_waste_move[player] <= 0:
+            for action in pawn_actions:
+                new_loc = self._return_pawn_action(action, player)
+                if cur_dis > self.path_to_goal(new_loc, player):
+                    new_pawn_actions += [action]
+
+
+
         if (self._player_walls_remaining[self.current_player] > 0):
             wall_actions = self._valid_wall_actions()  #
 
@@ -201,6 +229,8 @@ class Quoridor(object):
         else:
             wall_actions = []
 
+        if len(wall_actions + new_pawn_actions) != 0:
+            pawn_actions = new_pawn_actions
 
         return pawn_actions + wall_actions
 
@@ -216,12 +246,22 @@ class Quoridor(object):
             if not action in self.valid_actions:
                 raise ValueError("Invalid Action: {action}".format(action=action))
 
+
+        cur_dis = self.dist1 if player == 1 else self.dist2
+
         if action < 12:
             self._handle_pawn_action(action, player)
         else:
             self._handle_wall_action(action - 12)
 
+
         self.dist1, self.dist2 = self.get_shortest_path()
+
+        new_dis = self.dist1 if player == 1 else self.dist2
+
+        if new_dis >= cur_dis and action < 12:
+            self._player_waste_move[player] -= 1
+
 
         if self.dist1 == -1 or self.dist2 == -1:
             print("wall action is invalid")
@@ -243,7 +283,7 @@ class Quoridor(object):
         return done, winner
         """
 
-    def has_a_winner3(self):
+    def has_a_winner(self):
         game_over = False
         winner = None
         if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
@@ -254,7 +294,7 @@ class Quoridor(object):
             game_over = True
         return game_over, winner
 
-    def has_a_winner(self):
+    def has_a_winner3(self):
         game_over = False
         winner = None
 
@@ -896,12 +936,13 @@ class Quoridor(object):
             time_step += 1
 
             tic = time.time()
-            move, move_probs = player.choose_action(self, temp=temp, return_prob=1, time_step=time_step)
+            move, move_probs, q_vals = player.choose_action(self, temp=temp, return_prob=1, time_step=time_step)
             toc = time.time()
             print("turn %s" % time_step)
             print('[Move probs]\n', move_probs[:12])
             print('[Wall probs]\n', move_probs[12:])
-            print("player %s chose move : %s, prob: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
+            print("player %s chose move : %s, prob: %.3f, q_vals: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], q_vals[move], (toc-tic)))
+            print("player 1 remaining stupid move : %s, player 2 remaining stupid move : %s" %(self._player_waste_move[1], self._player_waste_move[2]))
 
             states.append(self.state())
             mcts_probs.append(move_probs)
@@ -956,15 +997,19 @@ class Quoridor(object):
 
             tic = time.time()
             if self.current_player == 1:
-                move, move_probs = alpha_player.choose_action(self, temp=temp, return_prob=1,
+                move, move_probs, q_vals = alpha_player.choose_action(self, temp=temp, return_prob=1,
                                                               time_step=time_step)
+
                 print("turn %s" % time_step)
                 print('[Move probs]\n', move_probs[:12])
                 print('[Wall probs]\n', move_probs[12:])
-                print("alpha_player chose move : %s, prob: %.3f" % (move, move_probs[move]))
+                print("alpha_player chose move : %s, prob: %.3f, q_vals: %.3f" % (move, move_probs[move], q_vals[move]))
             else:
                 move = pure_player.choose_action(self)
-                print("pure_player chose move : %s" % (move))
+                print("turn %s" % time_step)
+                print("pure_player chose move : {}, prob: {}".format(move[0], move[1]._Q))
+                move = move[0]
+
             toc = time.time()
 
             print("spend: %.2f seconds" % (toc - tic))

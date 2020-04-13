@@ -89,7 +89,6 @@ class MCTS(object):
         # Update value and visit count of nodes in this traversal.
         node.update_recursive(-leaf_value)
 
-    # 随机模拟下去，获得胜负结果，但是最深不模拟超过1000层
     def _evaluate_rollout(self, game, limit=1000):
         player = game.get_current_player()
         for i in range(limit):
@@ -102,8 +101,7 @@ class MCTS(object):
                 break
             # action_probs 是 zip(game.actions(), action_probs)
             action_probs = rollout_policy_fn(game)
-            # 所以itemgetter(1)，获取第二个数值，也就是随机概率分布，选择最大的
-            # 返回的依然是动作和概率元组对，选择第一个动作
+
             max_action = max(action_probs, key=itemgetter(1))[0]
             game.step(max_action)
         # else:
@@ -118,8 +116,12 @@ class MCTS(object):
         for n in range(self._n_playout):
             game_copy = copy.deepcopy(game)
             self._playout(game_copy)
-            #  print("模拟一次结束")
-        return max(self._root._children.items(), key=lambda act_node: act_node[1]._n_visits)[0]
+
+        max_value = max([act_node[1]._n_visits for act_node in self._root._children.items()])
+        max_acts = [act_node for act_node in self._root._children.items() if act_node[1]._n_visits == max_value ]
+
+        return random.choice(max_acts)
+        # return max(self._root._children.items(), key=lambda act_node: act_node[1]._n_visits)[0]
 
     def update_with_move(self, last_move):
         if last_move in self._root._children:
