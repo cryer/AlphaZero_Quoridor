@@ -245,13 +245,12 @@ class TrainPipeline(object):
 
         dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
 
-        valloss_acc = 0
-        polloss_acc = 0
-        entropy_acc = 0
-
-
-
         for i in range(NUM_EPOCHS):
+
+            valloss_acc = 0
+            polloss_acc = 0
+            entropy_acc = 0
+
 
             self.old_probs = self.new_probs
 
@@ -272,12 +271,6 @@ class TrainPipeline(object):
 
                 global iter_count
 
-                writer.add_scalar("Val Loss/train", valloss.item(), iter_count)
-                writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
-                writer.add_scalar("Entropy/train", entropy, iter_count)
-                writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
-                writer.add_scalar("Total Loss/train", valloss.item() + polloss.item(), iter_count)
-
 
                 iter_count += 1
 
@@ -286,6 +279,15 @@ class TrainPipeline(object):
                 entropy_acc += entropy.item()
 
             self.first_trained = True
+
+
+            writer.add_scalar("Val Loss/train", valloss.item() / len(dataloader), iter_count)
+            writer.add_scalar("Policy Loss/train", polloss.item() / len(dataloader), iter_count)
+            writer.add_scalar("Entropy/train", entropy / len(dataloader), iter_count)
+            writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
+            writer.add_scalar("Total Loss/train", (valloss.item() + polloss.item()) / len(dataloader), iter_count)
+
+
 
         valloss_mean = valloss_acc / (len(dataloader) * NUM_EPOCHS)
         polloss_mean = polloss_acc / (len(dataloader) * NUM_EPOCHS)
