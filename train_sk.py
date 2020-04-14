@@ -30,7 +30,7 @@ class TrainPipeline(object):
         self.lr_multiplier = 1.0
         self.temp = 1.0
         self.n_playout = 200
-        self.c_puct = 1
+        self.c_puct = 4
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 5
@@ -222,9 +222,9 @@ class TrainPipeline(object):
 
 
             extend_data.append((state, mcts_prob, winner))
-            # extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
-            # extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
-            # extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
+            extend_data.append((h_equi_state, h_equi_mcts_prob, winner))
+            extend_data.append((v_equi_state, v_equi_mcts_prob, winner * -1))
+            extend_data.append((hv_equi_state, hv_equi_mcts_prob, winner * -1))
 
 
         return extend_data
@@ -276,6 +276,8 @@ class TrainPipeline(object):
                 writer.add_scalar("Policy Loss/train", polloss.item(), iter_count)
                 writer.add_scalar("Entropy/train", entropy, iter_count)
                 writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
+                writer.add_scalar("Total Loss/train", valloss.item() + polloss.item(), iter_count)
+
 
                 iter_count += 1
 
