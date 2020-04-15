@@ -283,7 +283,7 @@ class Quoridor(object):
         return done, winner
         """
 
-    def has_a_winner(self):
+    def has_a_winner3(self):
         game_over = False
         winner = None
         if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
@@ -294,7 +294,7 @@ class Quoridor(object):
             game_over = True
         return game_over, winner
 
-    def has_a_winner3(self):
+    def has_a_winner(self):
         game_over = False
         winner = None
 

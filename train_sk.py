@@ -26,19 +26,19 @@ class TrainPipeline(object):
         self.game = Quoridor()
 
 
-        self.learn_rate = 2e-3
+        self.learn_rate = 1e-2
         self.lr_multiplier = 1.0
         self.temp = 1.0
-        self.n_playout = 200
+        self.n_playout = 400
         self.c_puct = 4
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 5
         self.kl_targ = 0.02
         self.check_freq = 5
-        self.game_batch_num = 1000
+        self.game_batch_num = 2000
         self.best_win_ratio = 0.0
-        self.pure_mcts_playout_num = 200
+        self.pure_mcts_playout_num = 400
 
 
         self.old_probs = 0
@@ -243,7 +243,7 @@ class TrainPipeline(object):
 
     def policy_update(self):
 
-        dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
+        dataloader = DataLoader(self.data_buffer, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
 
         for i in range(NUM_EPOCHS):
 
@@ -281,11 +281,11 @@ class TrainPipeline(object):
             self.first_trained = True
 
 
-            writer.add_scalar("Val Loss/train", valloss.item() / len(dataloader), iter_count)
-            writer.add_scalar("Policy Loss/train", polloss.item() / len(dataloader), iter_count)
-            writer.add_scalar("Entropy/train", entropy / len(dataloader), iter_count)
+            writer.add_scalar("Val Loss/train", valloss_acc / len(dataloader), iter_count)
+            writer.add_scalar("Policy Loss/train", polloss_acc / len(dataloader), iter_count)
+            writer.add_scalar("Entropy/train", entropy_acc / len(dataloader), iter_count)
             writer.add_scalar("LR Multiplier", self.lr_multiplier, iter_count)
-            writer.add_scalar("Total Loss/train", (valloss.item() + polloss.item()) / len(dataloader), iter_count)
+            writer.add_scalar("Total Loss/train", (valloss_acc + polloss_acc) / len(dataloader), iter_count)
 
 
 
@@ -332,10 +332,6 @@ class TrainPipeline(object):
                 if len(self.data_buffer) > BATCH_SIZE:
                     valloss, polloss, entropy = self.policy_update()
                     print("VALUE LOSS: %0.3f " % valloss, "POLICY LOSS: %0.3f " % polloss, "ENTROPY: %0.3f" % entropy)
-
-                    #writer.add_scalar("Val Loss/train", valloss.item(), i)
-                    #writer.add_scalar("Policy Loss/train", polloss.item(), i)
-                    #writer.add_scalar("Entory/train", entropy, i)
 
                 if (i + 1) % self.check_freq == 0:
                     count += 1
