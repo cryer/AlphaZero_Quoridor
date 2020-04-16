@@ -234,7 +234,7 @@ class MCTSPlayer(object):
             state = game.state()
 
             if self._is_selfplay:
-                # probs = 0.9 * probs + 0.1 * np.random.dirichlet(0.3 * np.ones(len(probs)))
+                probs = 0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs)))
                 # print(probs)
                 # move = acts[np.argmax(probs)]
                 move = np.random.choice(acts, p=probs)

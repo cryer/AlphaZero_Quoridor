@@ -17,14 +17,19 @@ def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
+def conv5x5(in_planes, out_planes, stride=1):
+    """5x5 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=5, stride=stride,
+                     padding=1, bias=False)
+
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
-        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.conv1 = conv5x5(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
+        self.conv2 = conv5x5(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
@@ -52,20 +57,22 @@ class BasicBlock(nn.Module):
 class policy_value_net(nn.Module):
     def __init__(self, block, inplanes, planes, stride=1):
         super(policy_value_net, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=5, stride=stride,
                                padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
 
         blocks = []
 
+        dim = planes
+
         for i in range(NUM_BLOCK):
-            blocks.append(block(planes, planes))
+            blocks.append(block(dim, dim))
 
         self.layers = nn.Sequential(*blocks)
 
         # value head
-        self.conv2 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
+        self.conv2 = nn.Conv2d(dim, 2, kernel_size=5, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(2)
         self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, BOARD_SIZE ** 2)
@@ -73,7 +80,7 @@ class policy_value_net(nn.Module):
 
 
         # policy head
-        self.conv3 = nn.Conv2d(planes, 2, kernel_size=3, stride=stride,
+        self.conv3 = nn.Conv2d(dim, 2, kernel_size=5, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
         self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
@@ -172,7 +179,6 @@ class PolicyValueNet(object):
 
         #
         log_act_probs, value = self.policy_value_net(state_batch)
-        6
         value_loss = F.mse_loss(value.view(-1), winner_batch)
 
         # print(mcts_probs.shape, log_act_probs.shape)

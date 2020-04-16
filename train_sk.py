@@ -26,11 +26,11 @@ class TrainPipeline(object):
         self.game = Quoridor()
 
 
-        self.learn_rate = 1e-2
+        self.learn_rate = 2e-3
         self.lr_multiplier = 1.0
         self.temp = 1.0
         self.n_playout = 400
-        self.c_puct = 4
+        self.c_puct = 5
         self.buffer_size = 10000
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 5
@@ -39,6 +39,7 @@ class TrainPipeline(object):
         self.game_batch_num = 2000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 400
+        self.start_time = str(time.strftime('%Y-%m-%d', time.localtime(time.time())))
 
 
         self.old_probs = 0
@@ -305,13 +306,13 @@ class TrainPipeline(object):
         current_mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn, c_puct=self.c_puct,
                                       n_playout=self.n_playout, is_selfplay=False)
 
-        pure_mcts_player = MCTSPure(c_puct=5, n_playout=self.pure_mcts_playout_num)
+        pure_mcts_player = MCTSPure(c_puct=self.c_puct, n_playout=self.pure_mcts_playout_num)
 
         win_cnt = defaultdict(int)
         for i in range(n_games):
             winner = self.game.start_test_play(current_mcts_player, pure_mcts_player, is_shown=0, first= i % 2)
             win_cnt[winner] += 1
-            print("{}th evaluation game finished out of {} games".format(i, n_games))
+            print("{}th evaluation game finished and won {} games out of {} games".format(i, win_cnt[1], n_games))
 
         win_ratio = 1.0 * (win_cnt[1] + 0.5*win_cnt[-1]) / n_games
         print("num_playouts:{}, win: {}, lose: {}, tie: {}".format(self.pure_mcts_playout_num, win_cnt[1], win_cnt[2], win_cnt[-1]))
@@ -341,7 +342,7 @@ class TrainPipeline(object):
                     win_ratio = self.policy_evaluate()
                     writer.add_scalar("Win Ratio against pure MCTS", win_ratio, i)
 
-                    self.policy_value_net.save_model('model_a_' + str(count) + '_' + str("%0.3f_" % (valloss+polloss) + str(time.strftime('%Y-%m-%d', time.localtime(time.time())))))
+                    self.policy_value_net.save_model('model_' + str(count) + '_' + str("%0.3f_" % (valloss+polloss) + str(time.strftime('%Y-%m-%d', time.localtime(time.time())))))
         except KeyboardInterrupt:
             print('\n\rquit')
 
