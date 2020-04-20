@@ -325,7 +325,7 @@ class TrainPipeline(object):
             # win_ratio = self.policy_evaluate(n_games=1)
 
 
-            self.collect_selfplay_data(50)
+            self.collect_selfplay_data(20)
             count = 0
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)    # collect_s

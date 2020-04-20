@@ -213,7 +213,7 @@ class Quoridor(object):
         cur_dis = self.dist1 if player == 1 else self.dist2
 
         new_pawn_actions = []
-        if self._player_waste_move[player] <= 0:
+        if self._player_waste_move[player] >= 0:
             for action in pawn_actions:
                 new_loc = self._return_pawn_action(action, player)
                 if cur_dis > self.path_to_goal(new_loc, player):

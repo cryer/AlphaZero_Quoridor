@@ -26,21 +26,19 @@ def conv5x5(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
-        self.conv1 = conv5x5(inplanes, planes, stride)
+        self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv5x5(planes, planes)
+        self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
         self.downsample = downsample
         self.stride = stride
 
     def forward(self, x):
         residual = x
-        # print(residual.size())
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
-
         out = self.conv2(out)
         out = self.bn2(out)
         # print(out.size())
@@ -57,7 +55,7 @@ class BasicBlock(nn.Module):
 class policy_value_net(nn.Module):
     def __init__(self, block, inplanes, planes, stride=1):
         super(policy_value_net, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=5, stride=stride,
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.relu = nn.ReLU(inplace=True)
@@ -72,25 +70,30 @@ class policy_value_net(nn.Module):
         self.layers = nn.Sequential(*blocks)
 
         # value head
-        self.conv2 = nn.Conv2d(dim, 2, kernel_size=5, stride=stride,
+        self.conv2 = nn.Conv2d(dim, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(2)
-        self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, BOARD_SIZE ** 2)
-        self.fc2 = nn.Linear(BOARD_SIZE ** 2, 1)
+        self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE * 2 - 1) ** 2)
+        self.fc2 = nn.Linear((BOARD_SIZE * 2 - 1) ** 2, 1)
 
 
         # policy head
-        self.conv3 = nn.Conv2d(dim, 2, kernel_size=5, stride=stride,
+        self.conv3 = nn.Conv2d(dim, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc3 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
+        self.fc4 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE * 2 - 1) ** 2)
+        self.fc3 = nn.Linear((BOARD_SIZE * 2 - 1) ** 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
 
 
     def forward(self,x):
         out = self.conv1(x)
+        a = out.size()
         out = self.bn1(out)
+        b = out.size()
         out = self.relu(out)
+        c = out.size()
         out = self.layers(out)
+        d = out.size()
 
         # value head
         value_out = self.conv2(out)
@@ -106,6 +109,7 @@ class policy_value_net(nn.Module):
         policy_out = self.relu(policy_out)
         policy_out = policy_out.view(policy_out.size(0), -1)
         # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4
+        policy_out = self.fc4(policy_out)
         policy_out = F.log_softmax(self.fc3(policy_out), dim = 1)
 
         return policy_out,value_out
@@ -116,10 +120,10 @@ class PolicyValueNet(object):
         self.l2_const = 1e-4  #
         if self.use_gpu:
             # device = torch.device("cuda:0")
-            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN,NN_DIM).cuda()
+            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN, NN_DIM).cuda()
         else:
             # device = torch.device("cpu")
-            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN,NN_DIM)
+            self.policy_value_net = policy_value_net(BasicBlock, 10 * HISTORY_LEN, NN_DIM)
 
         self.optimizer = optim.Adam(self.policy_value_net.parameters(), weight_decay=self.l2_const)
 
