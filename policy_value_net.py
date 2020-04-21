@@ -73,27 +73,22 @@ class policy_value_net(nn.Module):
         self.conv2 = nn.Conv2d(dim, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(2)
-        self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE * 2 - 1) ** 2)
-        self.fc2 = nn.Linear((BOARD_SIZE * 2 - 1) ** 2, 1)
+        self.fc1 = nn.Linear(BOARD_SIZE ** 2 * 2, BOARD_SIZE ** 2)
+        self.fc2 = nn.Linear(BOARD_SIZE ** 2, 1)
 
 
         # policy head
         self.conv3 = nn.Conv2d(dim, 2, kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(2)
-        self.fc4 = nn.Linear(BOARD_SIZE ** 2 * 2, (BOARD_SIZE * 2 - 1) ** 2)
-        self.fc3 = nn.Linear((BOARD_SIZE * 2 - 1) ** 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
+        self.fc3 = nn.Linear(BOARD_SIZE * 2 ** 2, (BOARD_SIZE - 1) ** 2 * 2 + 12)
 
 
     def forward(self,x):
         out = self.conv1(x)
-        a = out.size()
         out = self.bn1(out)
-        b = out.size()
         out = self.relu(out)
-        c = out.size()
         out = self.layers(out)
-        d = out.size()
 
         # value head
         value_out = self.conv2(out)
@@ -109,7 +104,6 @@ class policy_value_net(nn.Module):
         policy_out = self.relu(policy_out)
         policy_out = policy_out.view(policy_out.size(0), -1)
         # policy_out = F.log_softmax(self.fc3(policy_out), dim=1)  # softmax+log pytorch 0.4
-        policy_out = self.fc4(policy_out)
         policy_out = F.log_softmax(self.fc3(policy_out), dim = 1)
 
         return policy_out,value_out

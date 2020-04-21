@@ -35,7 +35,7 @@ class TrainPipeline(object):
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 5
         self.kl_targ = 0.02
-        self.check_freq = 5
+        self.check_freq = 10
         self.game_batch_num = 2000
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 400
@@ -262,7 +262,7 @@ class TrainPipeline(object):
 
                 if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
                     self.lr_multiplier /= 1.5
-                elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
+                elif kl < self.kl_targ / 2 and self.lr_multiplier < 15:
                     self.lr_multiplier *= 1.5
 
 
