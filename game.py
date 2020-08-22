@@ -1,6 +1,6 @@
 import pygame
 from quoridor import Quoridor
-from agents.base import BaseAgent
+from agents.base import RandomAgent, RandomMoveAgent
 from agents.manual import ManualPygameAgent
 from mcts import MCTSPlayer as A_Player
 from pure_mcts import MCTSPlayer as B_Player
@@ -9,6 +9,8 @@ from policy_value_net import PolicyValueNet
 import numpy as np
 import time
 import argparse
+
+from constant import *
 
 # Define Colors
 BLACK = (0, 0, 0)
@@ -24,8 +26,8 @@ DARKBLUE = (0, 0, 128)
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = SCREEN_WIDTH - 200
 
-TILE_WIDTH = SCREEN_HEIGHT / 10.6
-TILE_HEIGHT = SCREEN_HEIGHT / 10.6
+TILE_WIDTH = SCREEN_HEIGHT / 5.8
+TILE_HEIGHT = SCREEN_HEIGHT / 5.8
 
 WALL_WIDTH = 0.2 * TILE_WIDTH
 WALL_HEIGHT = TILE_WIDTH * 2 + WALL_WIDTH
@@ -47,15 +49,18 @@ def text(screen, text, position1=2, position2=0.6, color=BLUE):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--player_type", type=int, default=1,
-                        help="palyer type you want to fight,1 is human,2 is computer")
-    parser.add_argument("--computer_type", type=int, default=0, help="computer type,1 is Alpha MCTS,2 is pure MCTS")
+                        help="Player type you want to fight: 1 is human, 2 is computer")
+    parser.add_argument("--computer_type", type=int, default=0, help="Computer type, 1 is Alpha MCTS, 2 is pure MCTS, 3 is random agent")
     args = parser.parse_args()
 
     game = Quoridor()
     human1 = ManualPygameAgent('Kurumi')
     human2 = ManualPygameAgent('Cryer')
-    MCTS_Alpha = A_Player(PolicyValueNet().policy_value_fn, c_puct=5, n_playout=30, is_selfplay=0)
-    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  # 50层400秒
+    MCTS_Alpha = A_Player(PolicyValueNet('model_26_0.546_2020-04-21').policy_value_fn, c_puct=5, n_playout=400, is_selfplay=0)
+    MCTS_Pure = B_Player(c_puct=5, n_playout=50)  #
+
+    random = RandomAgent()
+    randomMove = RandomMoveAgent()
 
     if args.player_type == 1:
         player_types = {1: 'human', 2: 'human'}
@@ -68,11 +73,13 @@ def main():
             players = {1: human1, 2: MCTS_Alpha}
         elif args.computer_type == 2:
             players = {1: human1, 2: MCTS_Pure}
+        elif args.computer_type == 3:
+            players = {1: human1, 2: randomMove}
         elif args.computer_type == 0:
             print("Set computer type to 1 or 2 for choosing computer!")
             # pygame.quit()
 
-    # game.load(player1, player2)
+    game.load(players[1], players[2])
 
     pygame.init()
 
@@ -91,7 +98,6 @@ def main():
     while not done:
         player_moved = False
 
-        # 定义落子历史
         # move_history = []
 
         pawn_moves, walls = draw_game(game, screen, valid_actions)
@@ -119,11 +125,10 @@ def main():
                             break
                         if player_moved: break
                     # if player_moved: break
-                    # 添加
                     if player_moved:
                         real_action = players[game.current_player].choose_action()
                         # move_history.append(real_action)
-                        done, winner = game.step(real_action)
+                        game.step(real_action)
                         render(game, screen)  # 渲染游戏
                         break
 
@@ -137,7 +142,7 @@ def main():
                         if player_moved == True:
                             real_action = players[game.current_player].choose_action()
                             # move_history.append(real_action)
-                            done, winner = game.step(real_action)
+                            game.step(real_action)
                             render(game, screen)  # 渲染游戏
                             break
 
@@ -146,16 +151,19 @@ def main():
 
         valid_actions = game.actions()
 
-        # 待改
         if player_types[game.current_player] == 'computer':
-            print("computer %s thinking..." % str(game.current_player))
+            print("Computer %s thinking..." % str(game.current_player))
             tic = time.time()
             # real_action = np.random.choice(valid_actions)
             real_action = players[game.current_player].choose_action(game)
+
+            dist1, dist2 = game.get_shortest_path()
             # move_history.append(real_action)
+            print("Player 1's shortest path: {}, Player 2's shortest path is {}".format(dist1, dist2))
             toc = time.time()
-            print("MCTS choose action:", real_action, "  ,spend %s seconds" % str(toc - tic))
-            done, winner = game.step(real_action)
+            print("Computer's action:", real_action, ", spent %s seconds" % str(toc - tic))
+            game.step(real_action)
+            done, winner = game.has_a_winner()
             # render(game, screen)
             # valid_actions = game.valid_actions
         # if game.current_player == 1:
@@ -178,38 +186,38 @@ def draw_game(game, screen, valid_actions):
     reference_tile = game._positions[game.current_player]  # 当前玩家的位置，一个标量
 
     action_tiles = {}
-    # 遍历所有合法的棋子移动，action是一个int
+
     for action in pawn_actions:
         if action == game._DIRECTIONS['N']:
-            action_tiles[reference_tile + 9] = action
+            action_tiles[reference_tile - BOARD_SIZE] = action
         elif action == game._DIRECTIONS['S']:
-            action_tiles[reference_tile - 9] = action
+            action_tiles[reference_tile + BOARD_SIZE] = action
         elif action == game._DIRECTIONS['E']:
             action_tiles[reference_tile + 1] = action
         elif action == game._DIRECTIONS['W']:
             action_tiles[reference_tile - 1] = action
         elif action == game._DIRECTIONS['NN']:
-            action_tiles[reference_tile + 18] = action
+            action_tiles[reference_tile - (BOARD_SIZE * 2)] = action
         elif action == game._DIRECTIONS['SS']:
-            action_tiles[reference_tile - 18] = action
+            action_tiles[reference_tile + (BOARD_SIZE * 2)] = action
         elif action == game._DIRECTIONS['EE']:
             action_tiles[reference_tile + 2] = action
         elif action == game._DIRECTIONS['WW']:
             action_tiles[reference_tile - 2] = action
         elif action == game._DIRECTIONS['NE']:
-            action_tiles[reference_tile + 10] = action
+            action_tiles[reference_tile - (BOARD_SIZE - 1)] = action
         elif action == game._DIRECTIONS['NW']:
-            action_tiles[reference_tile + 8] = action
+            action_tiles[reference_tile - (BOARD_SIZE + 1)] = action
         elif action == game._DIRECTIONS['SE']:
-            action_tiles[reference_tile - 8] = action
+            action_tiles[reference_tile + (BOARD_SIZE + 1)] = action
         elif action == game._DIRECTIONS['SW']:
-            action_tiles[reference_tile - 10] = action
+            action_tiles[reference_tile + (BOARD_SIZE - 1)] = action
     # action_tiles key是位置，value是上一步动作action的值0-11
     # Draw Tiles
     pawn_moves = []
-    for row in range(9):
-        for column in range(9):
-            if row * 9 + column in action_tiles.keys():
+    for row in range(BOARD_SIZE):
+        for column in range(BOARD_SIZE):
+            if row * BOARD_SIZE + column in action_tiles.keys():
                 if game.current_player == 1:
                     color = LIGHTBLUE
                 else:
@@ -218,22 +226,22 @@ def draw_game(game, screen, valid_actions):
                     screen,
                     color,
                     [(TILE_WIDTH + WALL_WIDTH) * column,
-                     (WALL_WIDTH + TILE_HEIGHT) * (8 - row),
+                     (WALL_WIDTH + TILE_HEIGHT) * (BOARD_SIZE - 1 - row),
                      TILE_WIDTH,
                      TILE_HEIGHT]
                 )
-                pawn_moves.append([rect, action_tiles[row * 9 + column]])
+                pawn_moves.append([rect, action_tiles[row * BOARD_SIZE + column]])
             else:
-                if row * 9 + column == game._positions[1]:
+                if row * BOARD_SIZE + column == game._positions[1]:
                     color = BLUE
-                elif row * 9 + column == game._positions[2]:
+                elif row * BOARD_SIZE + column == game._positions[2]:
                     color = RED
                 else:
                     color = DARKBLUE
                 pygame.draw.rect(screen,
                                  color,
                                  [(TILE_WIDTH + WALL_WIDTH) * column,
-                                  (WALL_WIDTH + TILE_HEIGHT) * (8 - row),
+                                  (WALL_WIDTH + TILE_HEIGHT) * (BOARD_SIZE - 1 - row),
                                   TILE_WIDTH,
                                   TILE_HEIGHT])
 
@@ -241,49 +249,49 @@ def draw_game(game, screen, valid_actions):
 
     # Draw Vertical Walls
     placed_walls = []
-    for row in range(8):
-        for column in range(8):
+    for row in range(BOARD_SIZE - 1):
+        for column in range(BOARD_SIZE - 1):
             collide_points = []
             rect = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                               (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row),
                                WALL_WIDTH,
                                WALL_HEIGHT)
-            if game._intersections[row * 8 + column] == -1:
+            if game._intersections[row * (BOARD_SIZE - 1) + column] == -1:
                 placed_walls.append(rect)
             else:
                 # Collide rectangles for highlighting the walls on hover
                 collide_top = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                                          (TILE_HEIGHT + WALL_WIDTH) * (7 - row) + TILE_HEIGHT / 2,
+                                          (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row) + TILE_HEIGHT / 2,
                                           WALL_WIDTH,
                                           TILE_HEIGHT / 2)
                 pygame.draw.rect(screen, BLACK, collide_top)
                 collide_points.append(collide_top)
 
                 collide_bottom = pygame.Rect(TILE_WIDTH + (TILE_WIDTH + WALL_WIDTH) * column,
-                                             (TILE_HEIGHT + WALL_WIDTH) * (7 - row) + TILE_HEIGHT + WALL_WIDTH,
+                                             (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row) + TILE_HEIGHT + WALL_WIDTH,
                                              WALL_WIDTH,
                                              TILE_HEIGHT / 2)
                 pygame.draw.rect(screen, BLACK, collide_bottom)
                 collide_points.append(collide_bottom)
 
             pygame.draw.rect(screen, BLACK, rect)
-            walls.append([rect, collide_points, row * 8 + column + 64 + 12])
+            walls.append([rect, collide_points, row * (BOARD_SIZE -1) + column + (BOARD_SIZE -1) ** 2 + 12])
 
     # Draw Horizontal Walls
-    for row in range(8):
-        for column in range(8):
+    for row in range(BOARD_SIZE - 1):
+        for column in range(BOARD_SIZE - 1):
             rect = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column,
-                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row),
                                WALL_HEIGHT,
                                WALL_WIDTH)
-            if game._intersections[row * 8 + column] == 1:
+            if game._intersections[row * (BOARD_SIZE - 1) + column] == 1:
                 placed_walls.append(rect)
             else:
                 # Collide rectangles for highlighting the walls on hover
                 collide_points = []
 
                 collide_left = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column + TILE_WIDTH / 2,
-                                           TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                                           TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row),
                                            TILE_WIDTH / 2,
                                            WALL_WIDTH)
 
@@ -291,19 +299,19 @@ def draw_game(game, screen, valid_actions):
                 collide_points.append(collide_left)
 
                 collide_right = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * column + TILE_WIDTH + WALL_WIDTH,
-                                            TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                                            TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row),
                                             TILE_WIDTH / 2,
                                             WALL_WIDTH)
                 pygame.draw.rect(screen, BLACK, collide_right)
                 collide_points.append(collide_right)
 
             rect = pygame.Rect((TILE_HEIGHT + WALL_WIDTH) * (column),
-                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (7 - row),
+                               TILE_HEIGHT + (TILE_HEIGHT + WALL_WIDTH) * (BOARD_SIZE - 2 - row),
                                WALL_HEIGHT,
                                WALL_WIDTH)
 
             pygame.draw.rect(screen, BLACK, rect)
-            walls.append([rect, collide_points, row * 8 + column + 12])
+            walls.append([rect, collide_points, row * (BOARD_SIZE - 1) + column + 12])
 
     for wall in placed_walls:
         pygame.draw.rect(screen, BROWN, wall)
@@ -311,10 +319,10 @@ def draw_game(game, screen, valid_actions):
     # Draw Walls Remaining
     font = pygame.font.SysFont("arial", 18)
 
-    player1_walls = font.render("Walls Remaining: {player1}".format(player1=game._player1_walls_remaining), 1, BLUE)
+    player1_walls = font.render("Walls Remaining: {player1}".format(player1=game._player_walls_remaining[1]), 1, BLUE)
     player1_text_position = SCREEN_HEIGHT + 2, SCREEN_HEIGHT * 0.9
 
-    player2_walls = font.render("Walls Remaining: {player2}".format(player2=game._player2_walls_remaining), 1, RED)
+    player2_walls = font.render("Walls Remaining: {player2}".format(player2=game._player_walls_remaining[2]), 1, RED)
     player2_text_position = SCREEN_HEIGHT + 2, SCREEN_HEIGHT * 0.1
 
     move_history = []

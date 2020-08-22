@@ -1,12 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import random
+import time
+
 import numpy as np
 from collections import defaultdict, deque
 from quoridor import Quoridor
 from policy_value_net import PolicyValueNet
 
 from mcts import MCTSPlayer
+
+from torch.utils.tensorboard import SummaryWriter
+
+
+from constant import BOARD_SIZE, WALL_NUM
+
+
+writer = SummaryWriter()
 
 
 class TrainPipeline(object):
@@ -17,16 +27,18 @@ class TrainPipeline(object):
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # 适应性调节学习速率
         self.temp = 1.0
-        self.n_playout = 400
+        self.n_playout = 200
         self.c_puct = 5
         self.buffer_size = 10000
-        self.batch_size = 128  # 取1 测试ing
+        self.batch_size = 32  # 取1 测试ing
         self.data_buffer = deque(maxlen=self.buffer_size)
         self.play_batch_size = 1
-        self.epochs = 5
+        self.epochs = 50
         self.kl_targ = 0.02
-        self.check_freq = 50
-        self.game_batch_num = 1500
+        self.check_freq = 5
+        self.game_batch_num = 1000
+        self.game_batch_num = 200
+        
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
         if init_model:
@@ -72,7 +84,7 @@ class TrainPipeline(object):
         #                                                                     新旧之间的KL散度来控制学习速率的退火
         # 开始训练epochs个轮次
         for i in range(self.epochs):
-            loss, entropy = self.policy_value_net.train_step(state_batch, mcts_probs_batch, winner_batch,
+            valloss, polloss, entropy = self.policy_value_net.train_step(state_batch, mcts_probs_batch, winner_batch,
                                                              self.learn_rate * self.lr_multiplier)
             new_probs, new_v = self.policy_value_net.policy_value(state_batch)  # 计算新的概率和价值
             kl = np.mean(np.sum(old_probs * (np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)), axis=1))
@@ -87,30 +99,40 @@ class TrainPipeline(object):
         explained_var_old = 1 - np.var(np.array(winner_batch) - old_v.flatten()) / np.var(np.array(winner_batch))
         explained_var_new = 1 - np.var(np.array(winner_batch) - new_v.flatten()) / np.var(np.array(winner_batch))
         print(
-            "kl:{:.5f},lr_multiplier:{:.3f},loss:{},entropy:{},explained_var_old:{:.3f},explained_var_new:{:.3f}".format(
-                kl, self.lr_multiplier, loss, entropy, explained_var_old, explained_var_new))
-        return loss, entropy
+            "kl:{:.5f},lr_multiplier:{:.3f},value loss:{},policy loss:[],entropy:{},explained_var_old:{:.3f},explained_var_new:{:.3f}".format(
+                kl, self.lr_multiplier, valloss, polloss, entropy, explained_var_old, explained_var_new))
+        return valloss, polloss, entropy
+
 
     def run(self):
-        """训练"""
         try:
+            self.collect_selfplay_data(50)
+            count = 0
             for i in range(self.game_batch_num):
-                self.collect_selfplay_data(self.play_batch_size)
+                self.collect_selfplay_data(self.play_batch_size)    # collect_s
                 print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
-                    loss, entropy = self.policy_update()
-                    print("LOSS:",loss)
+                    valloss, polloss, entropy = self.policy_update()
+                    print("VALUE LOSS: %0.3f " % valloss.item(), "POLICY LOSS: %0.3f " % polloss.item())
+                    print("ENTROPY:",entropy)
                     # 保存loss
-                    with open('loss.txt', 'a') as f:
-                        f.writelines(str(loss) + '\n')
+
+                    writer.add_scalar("Val Loss/train", valloss.item(), i)
+                    writer.add_scalar("Policy Loss/train", polloss.item(), i)
+                    writer.add_scalar("Entropy/train", entropy, i)
+
                 if (i + 1) % self.check_freq == 0:
+                    count += 1
                     print("current self-play batch: {}".format(i + 1))
                     # win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model('current_policy')  # 保存模型
+                    # Add generation to filename
+                    
+                    self.policy_value_net.save_model('cp_gen_3_' + str(count) + '_' + str("%0.3f_" % valloss.item()) + str(time.strftime('%Y-%m-%d', time.localtime(time.time()))))  # 保存模型
         except KeyboardInterrupt:
             print('\n\rquit')
 
 
+# Start
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline()
+    training_pipeline = TrainPipeline(init_model=None)
     training_pipeline.run()

@@ -2,7 +2,7 @@
 import numpy as np
 import copy
 from operator import itemgetter
-
+import random
 
 def rollout_policy_fn(game):
     # 得到一个合法动作空间大小的随机概率分布
@@ -24,6 +24,7 @@ class TreeNode(object):
         self._Q = 0
         self._u = 0
         self._P = prior_p
+        self._discount_factor = 0.997
 
     def expand(self, action_priors):
         for action, prob in action_priors:
@@ -31,7 +32,12 @@ class TreeNode(object):
                 self._children[action] = TreeNode(self, prob)
 
     def select(self, c_puct):
-        return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
+
+        max_value = max([act_node[1].get_value(c_puct) for act_node in self._children.items()])
+        max_acts = [act_node for act_node in self._children.items() if act_node[1].get_value(c_puct) == max_value ]
+
+        return random.choice(max_acts)
+        # return max(self._children.items(), key=lambda act_node: act_node[1].get_value(c_puct))
 
     def update(self, leaf_value):
         # Count visit.
@@ -42,7 +48,7 @@ class TreeNode(object):
     def update_recursive(self, leaf_value):
         # If it is not root, this node's parent should be updated first.
         if self._parent:
-            self._parent.update_recursive(-leaf_value)
+            self._parent.update_recursive(-leaf_value * self._discount_factor)
         self.update(leaf_value)
 
     def get_value(self, c_puct):
@@ -77,12 +83,12 @@ class MCTS(object):
         end, winner = game.has_a_winner()
         if not end:
             node.expand(action_probs)
+
         # Evaluate the leaf node by random rollout
         leaf_value = self._evaluate_rollout(game)
         # Update value and visit count of nodes in this traversal.
         node.update_recursive(-leaf_value)
 
-    # 随机模拟下去，获得胜负结果，但是最深不模拟超过1000层
     def _evaluate_rollout(self, game, limit=1000):
         player = game.get_current_player()
         for i in range(limit):
@@ -95,8 +101,7 @@ class MCTS(object):
                 break
             # action_probs 是 zip(game.actions(), action_probs)
             action_probs = rollout_policy_fn(game)
-            # 所以itemgetter(1)，获取第二个数值，也就是随机概率分布，选择最大的
-            # 返回的依然是动作和概率元组对，选择第一个动作
+
             max_action = max(action_probs, key=itemgetter(1))[0]
             game.step(max_action)
         # else:
@@ -111,8 +116,12 @@ class MCTS(object):
         for n in range(self._n_playout):
             game_copy = copy.deepcopy(game)
             self._playout(game_copy)
-            print("模拟一次结束")
-        return max(self._root._children.items(), key=lambda act_node: act_node[1]._n_visits)[0]
+
+        max_value = max([act_node[1]._n_visits for act_node in self._root._children.items()])
+        max_acts = [act_node for act_node in self._root._children.items() if act_node[1]._n_visits == max_value ]
+
+        return random.choice(max_acts)
+        # return max(self._root._children.items(), key=lambda act_node: act_node[1]._n_visits)[0]
 
     def update_with_move(self, last_move):
         if last_move in self._root._children:

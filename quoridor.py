@@ -2,6 +2,16 @@ import numpy as np
 from queue import Queue
 import time
 
+from collections import deque
+
+import copy
+
+from constant import *
+
+HORIZONTAL = 1
+VERTICAL = -1
+
+
 class Quoridor(object):
     HORIZONTAL = 1
     VERTICAL = -1
@@ -9,31 +19,32 @@ class Quoridor(object):
     def __init__(self, safe=False):
         self.safe = safe
 
-        self.action_space = 140  # 140 possible actions in total
+        self.action_space = 12 + (BOARD_SIZE - 1) ** 2  # 12 + 32 actions in total (5x5 Quoridor)
         self.n_players = 2
-        self.players = [1, 2]  # 两个玩家
+        self.players = [1, 2]  #
         self.reset()
 
-    # 待改
+    # load player's info (human or computer)
     def load(self, p1, p2):
         self.player1 = p1
         self.player2 = p2
 
-    # 获取当前玩家
+    # return current player info
     def get_current_player(self):
         return self.current_player
 
-    def reset(self):
-        self.current_player = 1
-        self.last_player = -1
+    # reset and initialize single game
+    def reset(self, first_player=1, second_player=2):
+        self.current_player = first_player
+        self.last_player = second_player
 
         # Initialize Tiles
-        self.tiles = np.zeros(81)
+        self.tiles = np.zeros(BOARD_SIZE ** 2)
 
         # Initialize Player Locations
         self._positions = {
-            1: 4,
-            2: 76
+            1: (BOARD_SIZE ** 2) - (BOARD_SIZE//2) - 1,
+            2: BOARD_SIZE // 2
         }
 
         self._DIRECTIONS = {
@@ -42,68 +53,94 @@ class Quoridor(object):
             'NE': 8, 'NW': 9, 'SE': 10, 'SW': 11
         }
         self.N_DIRECTIONS = 12
-        self.N_TILES = 81
-        self.N_ROWS = 9
-        self.N_INTERSECTIONS = 64
+        self.N_TILES = BOARD_SIZE ** 2
+        self.N_ROWS = BOARD_SIZE
+        self.N_INTERSECTIONS = (BOARD_SIZE - 1) ** 2
 
-        # There are 64 possible intersection
+        # There are 16 possible intersection
         # Horizontal Walls - 1
         # No Wall - 0
         # Vertical Wall - -1
-        self._intersections = np.zeros(64)
+        self._intersections = np.zeros((BOARD_SIZE - 1) ** 2)
 
-        self._player1_walls_remaining = 10
-        self._player2_walls_remaining = 10
+        self._player_walls_remaining = {1: WALL_NUM, 2: WALL_NUM}
+
+
+        self._player_waste_move = {1: 2, 2: 2}
+
+        self.dist1 = BOARD_SIZE - 1
+        self.dist2 = BOARD_SIZE - 1
+
+        self.states = deque(maxlen=HISTORY_LEN * 10)
 
     def state(self):
-        """Returns a set of 9x9 planes that represent the game state.
-        1. The current player position
-        2. The opponent position
-        3. Vertical Walls
-        4. Horizontal Walls
-        5 - 14. Number of walls remaining for current player
-        15 - 24. Number of walls remaining for opponent
-        25. Whose turn it is (0 for player 1, 1 for player 2)
+        """Returns a set of 5x5 planes that represent the game state.
+        0. No walls
+        1. Vertical walls
+        2. Horizontal walls
+        3. The current player position
+        4. The opponent position
+        5. Number of walls remaining for current player (if 3walls remain, 5/6/8th are zeros and 7th is ones)
+        6. Number of walls remaining for opponent
+        7. Whose turn it is (0 for player 1, 1 for player 2)
+        8. Distance to goal for player 1
+        9. Distance to goal for player 2
         """
         player1_position_plane = self.tiles.copy()
-        player1_position_plane[self._positions[1]] = 1
-        player1_position_plane = player1_position_plane.reshape([9, 9])
+        player1_position_plane[self._positions[self.current_player]] = 1
+        player1_position_plane = player1_position_plane.reshape([BOARD_SIZE, BOARD_SIZE])
 
         player2_position_plane = self.tiles.copy()
-        player2_position_plane[self._positions[2]] = 1
-        player2_position_plane = player2_position_plane.reshape([9, 9])
+        player2_position_plane[self._positions[3 - self.current_player]] = 1
+        player2_position_plane = player2_position_plane.reshape([BOARD_SIZE, BOARD_SIZE])
 
-        player1_walls_plane = np.zeros([10, 9, 9])
-        player2_walls_plane = np.zeros([10, 9, 9])
+        # player1_walls_plane = np.zeros([WALL_NUM+1, BOARD_SIZE, BOARD_SIZE])
+        # player2_walls_plane = np.zeros([WALL_NUM+1, BOARD_SIZE, BOARD_SIZE])
 
-        player1_walls_plane[self._player1_walls_remaining - 1, :, :] = 1
-        player2_walls_plane[self._player2_walls_remaining - 1, :, :] = 1
+        # player1_walls_plane[self._player_walls_remaining[self.current_player], :, :] = 1
+        # player2_walls_plane[self._player_walls_remaining[3 - self.current_player], :, :] = 1
 
-        # Set the wall planes
+        player1_walls_plane = np.full((1, BOARD_SIZE, BOARD_SIZE),self._player_walls_remaining[self.current_player])
+        player2_walls_plane = np.full((1, BOARD_SIZE, BOARD_SIZE),self._player_walls_remaining[3 - self.current_player])
+
+
+
+        # 1 where vertical walls are placed
+        # if state size is ?x9x9, use only ?x8x8 field
         vertical_walls = np.pad(
-            np.int8(self._intersections == -1).reshape([8, 8]),
+            np.int8(self._intersections == -1).reshape([BOARD_SIZE - 1, BOARD_SIZE - 1]),
             (0, 1),
             mode='constant',
             constant_values=0
         )
 
+        # 1 where horizontal walls are placed
+        # if state size is ?x9x9, use only ?x8x8 field
         horizontal_walls = np.pad(
-            np.int8(self._intersections == 1).reshape([8, 8]),
+            np.int8(self._intersections == 1).reshape([BOARD_SIZE - 1, BOARD_SIZE - 1]),
             (0, 1),
             mode='constant',
             constant_values=0
         )
 
+        # 1 where any walls exist
+        # if state size is ?x9x9, use only ?x8x8 field
         no_walls = np.pad(
-            np.int8(self._intersections == 0).reshape([8, 8]),
+            np.int8(self._intersections == 0).reshape([BOARD_SIZE - 1, BOARD_SIZE - 1]),
             (0, 1),
             mode='constant',
             constant_values=0
         )
 
-        # 不同玩家调整平面顺序
+
         if self.current_player == 1:
-            state = np.stack([
+            dist1_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), self.dist1)
+            dist2_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), self.dist2)
+        else:
+            dist1_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), self.dist2)
+            dist2_plane = np.full((1, BOARD_SIZE, BOARD_SIZE), self.dist1)
+
+        state = np.stack([
                 no_walls,
                 vertical_walls,
                 horizontal_walls,
@@ -111,29 +148,56 @@ class Quoridor(object):
                 player2_position_plane,
             ])
 
-            # print('Shape is {shape}'.format(shape=state.shape))
+        if self.current_player == 1:
+            current_player_plane = np.zeros([1, BOARD_SIZE, BOARD_SIZE])
+        else:
+            current_player_plane = np.ones([1, BOARD_SIZE, BOARD_SIZE])
 
-            current_player_plane = np.zeros([1, 9, 9])
-            state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
+        state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane, dist1_plane, dist2_plane])
+        # state = np.vstack([state, player1_walls_plane, player2_walls_plane, current_player_plane])
 
-        if self.current_player == 2:
-            state = np.stack([
-                no_walls,
-                vertical_walls,
-                horizontal_walls,
-                player2_position_plane,
-                player1_position_plane,
-            ])
 
-            current_player_plane = np.ones([1, 9, 9])
-            state = np.vstack([state, player2_walls_plane, player1_walls_plane, current_player_plane])
-            # print(state.shape)
+        if len(self.states) == 0:
+            for i in range(HISTORY_LEN):
+                self.states.extend(state)
+        else:
+            self.states.extend(state)
+
+        state = np.vstack([list(self.states)])
+
+
         return state
 
-    def load_state(self, state):
-        """Mutates the Quoridor object to match a given state"""
-        current_player = state[-1] == np.zeros([9, 9])
-        # TODO: Implement the rest of this
+
+    def get_shortest_path(self):
+
+        player1_target = 0
+        player2_target = BOARD_SIZE - 1
+
+        player1_position = self._positions[1]
+        player2_position = self._positions[2]
+
+        intersections = self._intersections
+
+
+        player1_valid, dist1 = self._bfs_to_goal2(intersections, player1_target, player1_position, player1_position, player=1)
+        player2_valid, dist2 = self._bfs_to_goal2(intersections, player2_target, player2_position, player2_position, player=2)
+
+        return dist1, dist2
+
+
+    def path_to_goal(self, location, player):
+
+        target = 0 if player == 1 else BOARD_SIZE - 1
+
+
+        intersections = self._intersections
+
+        _, dist = self._bfs_to_goal2(intersections, target, location, location, player=player)
+
+        return dist
+
+
 
     def actions(self):
         player = self.current_player
@@ -141,19 +205,33 @@ class Quoridor(object):
 
         opponent = 1 if player == 2 else 2
         opponent_loc = self._positions[opponent]
-        walls = self._intersections  # 长64一维数组
-        # 获得合法棋子动作空间
+        walls = self._intersections  #
+        #
         pawn_actions = self._valid_pawn_actions(location=location,
                                                 opponent_loc=opponent_loc, walls=walls, player=player)
-        # 如果当前为玩家1并且还有挡板，或者玩家为2，并且还有挡板，则获取挡板的合法动作空间
-        if ((self.current_player == 1 and self._player1_walls_remaining > 0)
-            or (self.current_player == 2 and self._player2_walls_remaining > 0)):
-            wall_actions = self._valid_wall_actions()  # 获得合法挡板动作空间
 
-            # 调整+12   因为前12个是棋子动作 4+8
+        cur_dis = self.dist1 if player == 1 else self.dist2
+
+        new_pawn_actions = []
+        if self._player_waste_move[player] >= 0:
+            for action in pawn_actions:
+                new_loc = self._return_pawn_action(action, player)
+                if cur_dis > self.path_to_goal(new_loc, player):
+                    new_pawn_actions += [action]
+
+
+
+        if (self._player_walls_remaining[self.current_player] > 0):
+            wall_actions = self._valid_wall_actions()  #
+
+            #
             wall_actions = [action + 12 for action in wall_actions]
         else:
             wall_actions = []
+
+        if len(wall_actions + new_pawn_actions) != 0:
+            pawn_actions = new_pawn_actions
+
         return pawn_actions + wall_actions
 
     def step(self, action):
@@ -161,100 +239,156 @@ class Quoridor(object):
         # self._logger.info("Player {player} chooses action {action}".format(player=self.current_player, action=action))
         player = self.current_player
         done = False
-        # 添加
+        #
         self.valid_actions = self.actions()
 
         if self.safe:
             if not action in self.valid_actions:
                 raise ValueError("Invalid Action: {action}".format(action=action))
 
+
+        cur_dis = self.dist1 if player == 1 else self.dist2
+
         if action < 12:
             self._handle_pawn_action(action, player)
         else:
             self._handle_wall_action(action - 12)
 
+
+        self.dist1, self.dist2 = self.get_shortest_path()
+
+        new_dis = self.dist1 if player == 1 else self.dist2
+
+        if new_dis >= cur_dis and action < 12:
+            self._player_waste_move[player] -= 1
+
+
+        if self.dist1 == -1 or self.dist2 == -1:
+            print("wall action is invalid")
+            self.print_board()
+            exit(0)
+
+        self.rotate_players()
+        """
         game_over, winner = self.has_a_winner()
         if game_over:
-            print("game over !winner is player" + str(winner))
+            #  print("game over !winner is player" + str(winner))
             done = True
         else:
-            self.rotate_players()  # 切换玩家
-            # observation = self.get_state  # get_state未实现
+            self.rotate_players()  #
+            # observation = self.get_state  # get_state
             # observation = self.state()
             # print("game over !winner is player" + str(winner))
 
-        return done
+        return done, winner
+        """
 
-    # 判断游戏是否结束
-    def game_end(self):
-        pass
-
-    # 判断是否有胜者
-    def has_a_winner(self):
+    def has_a_winner3(self):
         game_over = False
         winner = None
-        if self._positions[2] < 9:
+        if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
             winner = 2
             game_over = True
-        elif self._positions[1] > 71:
+        elif self._positions[1] < BOARD_SIZE:
             winner = 1
             game_over = True
         return game_over, winner
 
-    # 获取奖励
-    def _get_rewards(self):
-        done = True
-        if self._positions[2] < 9:
-            rewards, done = (1, -1)
-        elif self._positions[1] > 71:
-            rewards = (-1, 1)
-        else:
-            rewards = (0, 0)
-            done = False
-        return rewards, done
+    def has_a_winner(self):
+        game_over = False
+        winner = None
 
-    # 处理棋子动作
+        """
+        if self.current_player == 1 and self.dist1 == 1:
+            return True, 1
+        elif self.current_player == 2 and self.dist2 == 1:
+            return True, 2
+        """
+
+        if self._positions[2] > (BOARD_SIZE - 1) * BOARD_SIZE - 1:
+            return True, 2
+        elif self._positions[1] < BOARD_SIZE:
+            return True, 1
+        if self.dist1 - self.dist2 > 1 and self._player_walls_remaining[1] == 0:
+            return True, 2
+        elif self.dist2 - self.dist1 > 1 and self._player_walls_remaining[2] == 0:
+            return True, 1
+
+        return game_over, winner
+
+
+    # check that pawn moved to dead end
+    def is_dead_end(self, game):
+        current_player = self.get_current_player()
+
+
+
+    def _return_pawn_action(self, action, player):
+        if action == self._DIRECTIONS['N']:
+            return self._positions[player] - BOARD_SIZE
+        elif action == self._DIRECTIONS['S']:
+            return self._positions[player] + BOARD_SIZE
+        elif action == self._DIRECTIONS['E']:
+            return self._positions[player] + 1
+        elif action == self._DIRECTIONS['W']:
+            return self._positions[player] - 1
+        elif action == self._DIRECTIONS['NN']:
+            return self._positions[player] - (BOARD_SIZE * 2)
+        elif action == self._DIRECTIONS['SS']:
+            return self._positions[player] + (BOARD_SIZE * 2)
+        elif action == self._DIRECTIONS['EE']:
+            return self._positions[player] + 2
+        elif action == self._DIRECTIONS['WW']:
+            return self._positions[player] - 2
+        elif action == self._DIRECTIONS['NW']:
+            return self._positions[player] - (BOARD_SIZE + 1)
+        elif action == self._DIRECTIONS['NE']:
+            return self._positions[player] - (BOARD_SIZE - 1)
+        elif action == self._DIRECTIONS['SW']:
+            return self._positions[player] + (BOARD_SIZE - 1)
+        elif action == self._DIRECTIONS['SE']:
+            return self._positions[player] + (BOARD_SIZE + 1)
+        else:
+            raise ValueError("Invalid Pawn Action: {action}".format(action=action))
+
+
     def _handle_pawn_action(self, action, player):
         if action == self._DIRECTIONS['N']:
-            self._positions[player] += 9
+            self._positions[player] -= BOARD_SIZE
         elif action == self._DIRECTIONS['S']:
-            self._positions[player] -= 9
+            self._positions[player] += BOARD_SIZE
         elif action == self._DIRECTIONS['E']:
             self._positions[player] += 1
         elif action == self._DIRECTIONS['W']:
             self._positions[player] -= 1
         elif action == self._DIRECTIONS['NN']:
-            self._positions[player] += 18
+            self._positions[player] -= BOARD_SIZE * 2
         elif action == self._DIRECTIONS['SS']:
-            self._positions[player] -= 18
+            self._positions[player] += BOARD_SIZE *  2
         elif action == self._DIRECTIONS['EE']:
             self._positions[player] += 2
         elif action == self._DIRECTIONS['WW']:
             self._positions[player] -= 2
         elif action == self._DIRECTIONS['NW']:
-            self._positions[player] += 8
+            self._positions[player] -= BOARD_SIZE + 1
         elif action == self._DIRECTIONS['NE']:
-            self._positions[player] += 10
+            self._positions[player] -= BOARD_SIZE - 1
         elif action == self._DIRECTIONS['SW']:
-            self._positions[player] -= 10
+            self._positions[player] += BOARD_SIZE - 1
         elif action == self._DIRECTIONS['SE']:
-            self._positions[player] -= 8
+            self._positions[player] += BOARD_SIZE + 1
         else:
             raise ValueError("Invalid Pawn Action: {action}".format(action=action))
 
-    # 处理挡板动作
     def _handle_wall_action(self, action):
-        # Action values less than 64 are horizontal walls
-        if action < 64:
+        # Action values less than 16 are horizontal walls
+        if action < (BOARD_SIZE - 1) ** 2:
             self._intersections[action] = 1
-        # Action values above 64 are vertical walls
+        # Action values above 16 are vertical walls
         else:
-            self._intersections[action - 64] = -1
+            self._intersections[action - (BOARD_SIZE - 1) ** 2] = -1
 
-        if self.current_player == 1:
-            self._player1_walls_remaining -= 1
-        else:
-            self._player2_walls_remaining -= 1
+        self._player_walls_remaining[self.current_player] -= 1
         # self._logger.info(self._intersections)
 
     def rotate_players(self):
@@ -268,45 +402,32 @@ class Quoridor(object):
             self.current_player = 1
             self.last_player = 2
 
-    # walls ：长64一维数组 location：int 0-80
     def _valid_pawn_actions(self, walls, location, opponent_loc, player=1):
-        HORIZONTAL = 1
-        VERTICAL = -1
 
         valid = []
-        # 判断对面棋子是否相邻
-        opponent_north = location == opponent_loc - 9
-        opponent_south = location == opponent_loc + 9
-        opponent_east = location == opponent_loc - 1
-        opponent_west = location == opponent_loc + 1
+        opponent_north = (location == opponent_loc + BOARD_SIZE)
+        opponent_south = (location == opponent_loc - BOARD_SIZE)
+        opponent_east = (location == opponent_loc - 1)
+        opponent_west = (location == opponent_loc + 1)
 
         current_row = location // self.N_ROWS
 
         intersections = self._get_intersections(walls, location)
-        # 判断北面没有水平挡板和对面棋子
         n = intersections['NW'] != HORIZONTAL and intersections['NE'] != HORIZONTAL and not opponent_north
-        # 判断南面没有水平挡板和对面棋子
         s = intersections['SW'] != HORIZONTAL and intersections['SE'] != HORIZONTAL and not opponent_south
-        # 判断东面没有竖直挡板和对面棋子
         e = intersections['NE'] != VERTICAL and intersections['SE'] != VERTICAL and not opponent_east
-        # 判断西面没有竖直挡板和对面棋子
         w = intersections['NW'] != VERTICAL and intersections['SW'] != VERTICAL and not opponent_west
-        # 向北走，两种情况：1，按照上面的判断可走 2，虽到边界但是再走可以获胜
-        if n or (player == 1 and current_row == 8): valid.append(self._DIRECTIONS['N'])
-        # 同理
-        if s or (player == 2 and current_row == 0): valid.append(self._DIRECTIONS['S'])
+        if n: valid.append(self._DIRECTIONS['N'])
+        if s: valid.append(self._DIRECTIONS['S'])
         if e: valid.append(self._DIRECTIONS['E'])
         if w: valid.append(self._DIRECTIONS['W'])
-        # 如果北面有对手棋子并且北面没有水平挡板
+
+
         if opponent_north and intersections['NE'] != HORIZONTAL and intersections['NW'] != HORIZONTAL:
-            # 获取对手周围的挡板信息
             n_intersections = self._get_intersections(walls, opponent_loc)
-            # 如果对手北面没有水平挡板，或者 玩家1在第八行，也就是倒数第二行
-            if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL \
-                    or (current_row == 7 and player == 1):
-                # 可以走向北两步，也就是NN
+            if n_intersections['NW'] != HORIZONTAL and n_intersections['NE'] != HORIZONTAL:  # or (current_row == 3 and player == 1):
                 valid.append(self._DIRECTIONS['NN'])
-            # 如果对手东-北面没有竖直挡板，并且自己东-北面没有竖直挡板，可以走两步NE
+
             if n_intersections['NE'] != VERTICAL and intersections['NE'] != VERTICAL:
                 valid.append(self._DIRECTIONS['NE'])
 
@@ -316,8 +437,7 @@ class Quoridor(object):
 
         elif opponent_south and intersections['SE'] != HORIZONTAL and intersections['SW'] != HORIZONTAL:
             s_intersections = self._get_intersections(walls, opponent_loc)
-            if s_intersections['SW'] != HORIZONTAL and s_intersections['SE'] != HORIZONTAL \
-                    or (current_row == 1 and player == 2):
+            if s_intersections['SW'] != HORIZONTAL and s_intersections['SE'] != HORIZONTAL:  # or (current_row == 1 and player == 2):
                 valid.append(self._DIRECTIONS['SS'])
 
             if s_intersections['SE'] != VERTICAL and intersections['SE'] != VERTICAL:
@@ -332,10 +452,12 @@ class Quoridor(object):
             if e_intersections['SE'] != VERTICAL and e_intersections['NE'] != VERTICAL:
                 valid.append(self._DIRECTIONS['EE'])
 
-            if e_intersections['NE'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if e_intersections['NE'] != HORIZONTAL and e_intersections['NW'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['NE'])
 
-            if e_intersections['SE'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if e_intersections['SE'] != HORIZONTAL and e_intersections['SW'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['SE'])
 
 
@@ -344,73 +466,78 @@ class Quoridor(object):
             if w_intersections['NW'] != VERTICAL and w_intersections['SW'] != VERTICAL:
                 valid.append(self._DIRECTIONS['WW'])
 
-            if w_intersections['NW'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if w_intersections['NW'] != HORIZONTAL and w_intersections['NE'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['NW'])
 
-            if w_intersections['SW'] != HORIZONTAL:
+            # fix jumping over wall bug
+            if w_intersections['SW'] != HORIZONTAL and w_intersections['SE'] != HORIZONTAL:
                 valid.append(self._DIRECTIONS['SW'])
 
         return valid
 
-    # intersections： 一维数组 长64   current_tile：当前位置，int 0-80
     def _get_intersections(self, intersections, current_tile):
+
+
         """Gets the four intersections for a given tile."""
         location_row = current_tile // self.N_ROWS
-        # 判断棋子是否在四周边界
-        n_border = current_tile > 71
-        e_border = current_tile % 9 == 8
-        s_border = current_tile < 9
-        w_border = current_tile % 9 == 0
+        s_border = current_tile > (BOARD_SIZE - 1) * BOARD_SIZE -1
+        e_border = current_tile % BOARD_SIZE == BOARD_SIZE - 1
+        n_border = current_tile < BOARD_SIZE
+        w_border = current_tile % BOARD_SIZE == 0
 
         if n_border:
-            ne_intersection = 1
+            ne_intersection = HORIZONTAL
+
+            location_row = 0
             if w_border:
-                nw_intersection = -1
-                sw_intersection = -1
-                se_intersection = intersections[(current_tile - 9) - (location_row - 1)]
+                nw_intersection = VERTICAL
+                sw_intersection = VERTICAL
+                se_intersection = intersections[current_tile - location_row]
             elif e_border:
-                nw_intersection = 1
-                se_intersection = -1
-                sw_intersection = intersections[(current_tile - 9) - (location_row - 1) - 1]
+                nw_intersection = HORIZONTAL
+                se_intersection = VERTICAL
+                sw_intersection = intersections[current_tile - location_row - 1]
             else:
-                nw_intersection = 1
-                sw_intersection = intersections[(current_tile - 9) - (location_row - 1) - 1]
-                se_intersection = intersections[(current_tile - 9) - (location_row - 1)]
+                nw_intersection = HORIZONTAL
+                sw_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = intersections[current_tile - location_row]
         elif s_border:
-            sw_intersection = 1
+            location_row = BOARD_SIZE - 1
+            sw_intersection = HORIZONTAL
             if w_border:
-                nw_intersection = -1
-                se_intersection = 1
-                ne_intersection = intersections[current_tile - location_row]
+                nw_intersection = VERTICAL
+                se_intersection = HORIZONTAL
+                ne_intersection = intersections[(current_tile- BOARD_SIZE) - (location_row-1)]
             elif e_border:
-                se_intersection = -1
-                ne_intersection = -1
-                nw_intersection = ne_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = VERTICAL
+                ne_intersection = VERTICAL
+                nw_intersection = intersections[(current_tile - BOARD_SIZE) - location_row]
             else:
-                se_intersection = 1
-                ne_intersection = intersections[current_tile - location_row]
-                nw_intersection = ne_intersection = intersections[current_tile - location_row - 1]
+                se_intersection = HORIZONTAL
+                ne_intersection = intersections[(current_tile - BOARD_SIZE) - (location_row -1)]
+                nw_intersection = intersections[(current_tile - BOARD_SIZE) - location_row]
 
 
         # West but not north or south
         elif w_border:
-            nw_intersection = -1
-            sw_intersection = -1
-            ne_intersection = intersections[current_tile - location_row]
-            se_intersection = intersections[(current_tile - 9) - (location_row - 1)]
+            nw_intersection = VERTICAL
+            sw_intersection = VERTICAL
+            se_intersection = intersections[current_tile - location_row]
+            ne_intersection = intersections[(current_tile - BOARD_SIZE) - (location_row - 1)]
 
         elif e_border:
-            ne_intersection = -1
-            se_intersection = -1
-            nw_intersection = intersections[current_tile - location_row - 1]
-            sw_intersection = intersections[(current_tile - 9) - (location_row - 1) - 1]
+            ne_intersection = VERTICAL
+            se_intersection = VERTICAL
+            sw_intersection = intersections[current_tile - location_row - 1]
+            nw_intersection = intersections[(current_tile - BOARD_SIZE) - location_row]
 
         # No borders
         else:
-            ne_intersection = intersections[current_tile - location_row]
-            nw_intersection = intersections[current_tile - location_row - 1]
-            sw_intersection = intersections[(current_tile - 9) - (location_row - 1) - 1]
-            se_intersection = intersections[(current_tile - 9) - (location_row - 1)]
+            ne_intersection = intersections[(current_tile - BOARD_SIZE) - (location_row-1)]
+            nw_intersection = intersections[(current_tile - BOARD_SIZE) - location_row ]
+            sw_intersection = intersections[current_tile - (location_row +1)]
+            se_intersection = intersections[current_tile - location_row]
 
         return {'NW': nw_intersection,
                 'NE': ne_intersection,
@@ -425,44 +552,153 @@ class Quoridor(object):
                 valid.append(ix)
 
             if self._validate_vertical(ix):
-                valid.append(ix + 64)
+                valid.append(ix + (BOARD_SIZE - 1) ** 2)
 
         return valid
 
+
+    def _num_of_touched_walls(self, ix, direction):
+
+        column = ix % (BOARD_SIZE - 1)
+        row = ix // (BOARD_SIZE - 1)
+
+        count = 0
+
+        horizontal_test_idx = []
+        vertical_test_idx = []
+
+
+        if direction == HORIZONTAL:
+            if column == 0 or column == BOARD_SIZE - 2:
+                count += 1
+
+            if column >= 2:
+                horizontal_test_idx += [ix - 2]
+
+            if column <= BOARD_SIZE - 4:
+                horizontal_test_idx += [ix + 2]
+
+
+            if row != 0:
+                vertical_test_idx += [ix - BOARD_SIZE + 1]
+
+            if row != BOARD_SIZE - 2:
+                vertical_test_idx += [ix + BOARD_SIZE - 1]
+
+            if column != 0:
+                vertical_test_idx += [ix - 1]
+                if row != 0:
+                    vertical_test_idx += [ix - BOARD_SIZE]
+                if row != BOARD_SIZE - 2:
+                    vertical_test_idx += [ix + BOARD_SIZE - 2]
+
+            if column != BOARD_SIZE - 2:
+                vertical_test_idx += [ix + 1]
+                if row != 0:
+                    vertical_test_idx += [ix - BOARD_SIZE + 2]
+                if row != BOARD_SIZE - 2:
+                    vertical_test_idx += [ix + BOARD_SIZE]
+
+
+            for idx in vertical_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == VERTICAL:
+                        count += 1
+
+            for idx in horizontal_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == HORIZONTAL:
+                        count += 1
+
+        elif direction == VERTICAL:
+            if row == 0 or row == BOARD_SIZE - 2:
+                count += 1
+
+            if row >= 2:
+                vertical_test_idx += [ix - 2*(BOARD_SIZE -1 )]
+
+            if row <= BOARD_SIZE - 4:
+                vertical_test_idx += [ix + 2 * (BOARD_SIZE - 1)]
+
+
+            if column != 0:
+                horizontal_test_idx += [ix - 1]
+
+            if column != BOARD_SIZE - 2:
+                horizontal_test_idx += [ix + 1]
+
+            if row != 0:
+                horizontal_test_idx += [ix - BOARD_SIZE + 1]
+                if column != 0:
+                    horizontal_test_idx += [ix - BOARD_SIZE]
+                if column != BOARD_SIZE - 2:
+                    horizontal_test_idx += [ix - BOARD_SIZE + 2]
+
+            if row != BOARD_SIZE - 2:
+                horizontal_test_idx += [ix + BOARD_SIZE - 1]
+                if column != 0:
+                    horizontal_test_idx += [ix + BOARD_SIZE - 2]
+                if column != BOARD_SIZE - 2:
+                    horizontal_test_idx += [ix + BOARD_SIZE]
+
+
+            for idx in vertical_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == VERTICAL:
+                        count += 1
+
+            for idx in horizontal_test_idx:
+                if idx in range((BOARD_SIZE - 1) ** 2):
+                    if self._intersections[idx] == HORIZONTAL:
+                        count += 1
+
+
+        return count
+
+
     def _validate_horizontal(self, ix):
-        column = ix % 8
+        column = ix % (BOARD_SIZE - 1)
+        row = ix // (BOARD_SIZE - 1)
 
         if self._intersections[ix] != 0:
             return False
 
         if column != 0:
-            if self._intersections[ix - 1] == 1:
+            if self._intersections[ix - 1] == HORIZONTAL:
                 return False
 
-        if column != 7:
-            if self._intersections[ix + 1] == 1:
+        if column != BOARD_SIZE - 2:
+            if self._intersections[ix + 1] == HORIZONTAL:
                 return False
+
+        if self._num_of_touched_walls(ix, HORIZONTAL) < 2:
+            return True
 
         return not self._blocks_path(ix, self.HORIZONTAL)
 
     def _validate_vertical(self, ix):
-        row = ix // 8
+        column = ix % (BOARD_SIZE - 1)
+        row = ix // (BOARD_SIZE - 1)
+
         if self._intersections[ix] != 0:
             return False
 
         if row != 0:
-            if self._intersections[ix - 8] == -1:
+            if self._intersections[ix - (BOARD_SIZE - 1)] == VERTICAL:
                 return False
 
-        if row != 7:
-            if self._intersections[ix + 8] == -1:
+        if row != BOARD_SIZE - 2:
+            if self._intersections[ix + (BOARD_SIZE - 1)] == VERTICAL:
                 return False
+
+        if self._num_of_touched_walls(ix, VERTICAL) < 2:
+            return True
 
         return not self._blocks_path(ix, self.VERTICAL)
 
     def _blocks_path(self, wall_location, orientation):
-        player1_target = 8
-        player2_target = 0
+        player1_target = 0
+        player2_target = BOARD_SIZE - 1
 
         player1_position = self._positions[1]
         player2_position = self._positions[2]
@@ -478,10 +714,11 @@ class Quoridor(object):
 
     def _bfs_to_goal(self, intersections, target_row, player_position, opponent_position, player=1):
         visited = []
-        invalid_rows = [9, -1]
+        invalid_rows = [BOARD_SIZE, -1]
         visit_queue = Queue()
         visit_queue.put(player_position)
         target_visited = False
+
 
         while not target_visited and not visit_queue.empty():
             current_position = visit_queue.get()
@@ -489,33 +726,35 @@ class Quoridor(object):
                                                         location=current_position,
                                                         opponent_loc=opponent_position,
                                                         player=player)
+
             for direction in valid_directions:
                 if direction == self._DIRECTIONS['N']:
-                    new_position = current_position + 9
+                    new_position = current_position - BOARD_SIZE
                 elif direction == self._DIRECTIONS['S']:
-                    new_position = current_position - 9
+                    new_position = current_position + BOARD_SIZE
                 elif direction == self._DIRECTIONS['E']:
                     new_position = current_position + 1
                 elif direction == self._DIRECTIONS['W']:
                     new_position = current_position - 1
                 elif direction == self._DIRECTIONS['NN']:
-                    new_position = current_position + 18
+                    new_position = current_position - (BOARD_SIZE * 2)
                 elif direction == self._DIRECTIONS['SS']:
-                    new_position = current_position - 18
+                    new_position = current_position + (BOARD_SIZE * 2)
                 elif direction == self._DIRECTIONS['EE']:
                     new_position = current_position + 2
                 elif direction == self._DIRECTIONS['WW']:
                     new_position = current_position - 2
                 elif direction == self._DIRECTIONS['NE']:
-                    new_position = current_position + 10
+                    new_position = current_position - (BOARD_SIZE - 1)
                 elif direction == self._DIRECTIONS['NW']:
-                    new_position = current_position + 8
+                    new_position = current_position - (BOARD_SIZE + 1)
                 elif direction == self._DIRECTIONS['SW']:
-                    new_position = current_position - 10
+                    new_position = current_position + (BOARD_SIZE - 1)
                 elif direction == self._DIRECTIONS['SE']:
-                    new_position = current_position - 8
+                    new_position = current_position + (BOARD_SIZE + 1)
                 else:
                     raise ValueError('Invalid direction - should never happen')
+
 
                 new_row = new_position // self.N_ROWS
                 if new_row == target_row:
@@ -525,16 +764,94 @@ class Quoridor(object):
                     if new_row not in invalid_rows:
                         visit_queue.put(new_position)
 
+
         return target_visited
+
+    def _bfs_to_goal2(self, intersections, target_row, player_position, opponent_position, player=1):
+        visited = []
+        invalid_rows = [BOARD_SIZE, -1]
+        visit_queue = Queue()
+        visit_queue.put(player_position)
+        target_visited = False
+
+        dist = 0
+
+        if player_position // self.N_ROWS == target_row:
+            return True, dist
+
+
+        temp_queue = Queue()
+
+        while not target_visited and not visit_queue.empty():
+
+            while not visit_queue.empty() :
+                current_position = visit_queue.get()
+
+                if current_position < 0 or current_position > (BOARD_SIZE ** 2 -1):
+                    print("Strange position in the queue: ", current_position)
+
+                valid_directions = self._valid_pawn_actions(intersections,
+                                                        location=current_position,
+                                                        opponent_loc=opponent_position,
+                                                        player=player)
+
+
+                for direction in valid_directions:
+                    if direction == self._DIRECTIONS['N']:
+                        new_position = current_position - BOARD_SIZE
+                    elif direction == self._DIRECTIONS['S']:
+                        new_position = current_position + BOARD_SIZE
+                    elif direction == self._DIRECTIONS['E']:
+                        new_position = current_position + 1
+                    elif direction == self._DIRECTIONS['W']:
+                        new_position = current_position - 1
+                    elif direction == self._DIRECTIONS['NN']:
+                        new_position = current_position - (BOARD_SIZE * 2)
+                    elif direction == self._DIRECTIONS['SS']:
+                        new_position = current_position + (BOARD_SIZE * 2)
+                    elif direction == self._DIRECTIONS['EE']:
+                        new_position = current_position + 2
+                    elif direction == self._DIRECTIONS['WW']:
+                        new_position = current_position - 2
+                    elif direction == self._DIRECTIONS['NE']:
+                        new_position = current_position - (BOARD_SIZE - 1)
+                    elif direction == self._DIRECTIONS['NW']:
+                        new_position = current_position - (BOARD_SIZE + 1)
+                    elif direction == self._DIRECTIONS['SW']:
+                        new_position = current_position + (BOARD_SIZE - 1)
+                    elif direction == self._DIRECTIONS['SE']:
+                        new_position = current_position + (BOARD_SIZE + 1)
+                    else:
+                        raise ValueError('Invalid direction - should never happen')
+
+                    new_row = new_position // self.N_ROWS
+                    if new_row == target_row:
+                        return True, dist + 1
+                    elif new_position not in visited:
+                        visited.append(new_position)
+                        temp_queue.put(new_position)
+
+            while not temp_queue.empty():
+                position = temp_queue.get()
+                if position < 0 or position > (BOARD_SIZE ** 2 - 1):
+                    continue
+                else:
+                    visit_queue.put(position)
+
+            dist += 1
+
+        return target_visited, -1
+
+
 
     def add_wall(self, wall, orientation):
         self._intersections[wall] = orientation
 
     def print_board(self):
-        player1_row = self._positions[1] // 9
-        player1_col = self._positions[1] % 9
-        player2_row = self._positions[2] // 9
-        player2_col = self._positions[2] % 9
+        player1_row = self._positions[1] // BOARD_SIZE * 2
+        player1_col = self._positions[1] % BOARD_SIZE * 2
+        player2_row = self._positions[2] // BOARD_SIZE * 2
+        player2_col = self._positions[2] % BOARD_SIZE * 2
 
         x = 'X'
         o = 'O'
@@ -544,21 +861,56 @@ class Quoridor(object):
         dash = '-'
         none = ''
 
-        grid = [['{dash:4}'.format(dash=dash) for i in range(9)] for i in range(9)]
-        i_reshaped = self._intersections.reshape([8, 8])
+        grid_new = np.zeros([BOARD_SIZE * 2 - 1, BOARD_SIZE * 2 - 1])
+        grid_new[player1_row, player1_col] = 1
+        grid_new[player2_row, player2_col] = 2
+
+        i_reshaped = self._intersections.reshape([BOARD_SIZE - 1, BOARD_SIZE - 1])
+        for i in range(BOARD_SIZE -1):
+            for j in range(BOARD_SIZE - 1):
+                if i_reshaped[i][j] == 1:
+                    grid_new[((i * 2) + 1), (j * 2):((j * 2) + 3)] = 3
+                elif i_reshaped[i][j] == -1:
+                    grid_new[(i * 2):((i * 2) + 3), ((j * 2) + 1)] = 4
+
+        for i in range(BOARD_SIZE * 2 - 1):
+            render_row = ""
+            for j in range(BOARD_SIZE * 2 - 1):
+                if grid_new[i, j] == 0:
+                    if i % 2 == 0 and j % 2 == 0:
+                        render_row += " . "
+                    else:
+                        render_row += "   "
+                elif grid_new[i, j] == 1:
+                    render_row += " X "
+                elif grid_new[i, j] == 2:
+                    render_row += " O "
+                elif grid_new[i, j] == 3:
+                    render_row += "---"
+                else:
+                    render_row += " | "
+
+            print(render_row)
+
+        """
+        # Original print board code
+
+        grid = [['{dash:4}'.format(dash=dash) for i in range(5)] for i in range(5)]
+        i_reshaped = self._intersections.reshape([4, 4])
 
         grid[player1_row][player1_col] = '{x:4}'.format(x=x)
         grid[player2_row][player2_col] = '{o:4}'.format(o=o)
 
-        intersection_row = 7
-        for i in range(8, -1, -1):
-            for j in range(9):
+        intersection_row = 3
+        for i in range(4, -1, -1):
+            for j in range(5):
                 print(grid[i][j], end='')
             print()
             if intersection_row >= 0:
                 print('{none:2}'.format(none=none), end='')
                 for j in i_reshaped[intersection_row, :]:
                     if j == 1:
+                        # print('{h:4}'.format(h=h), end='')
                         print('{h:4}'.format(h=h), end='')
                     elif j == -1:
                         print('{v:4}'.format(v=v), end='')
@@ -566,41 +918,53 @@ class Quoridor(object):
                         print('{none:4}'.format(none=none), end='')
                 intersection_row -= 1
                 print()
+        """
 
     def clone(self):
         return Quoridor()
-    # 自博弈一次
-    def start_self_play(self, player, is_shown=0, temp=1e-3):
-        """
-         开始自博弈，也就是蒙特卡洛树搜索和蒙特卡洛树搜索之间的对抗。
-         主要是为了产生数据集，训练神经网络，保存的数据形式：(state, mcts_probs, z)
-        """
-        self.reset()     # 初始化棋盘
-        p1, p2 = self.players
-        states, mcts_probs, current_players = [], [], []       # 初始化需要保存的信息，胜负情况要在模拟结束时保存
 
-        while(1):   # 循环进行自博弈
-            # 待修改
+    def start_self_play(self, player, is_shown=0, temp=1e-3):
+
+        self.reset()
+        p1, p2 = self.players
+        states, mcts_probs, current_players = [], [], []
+
+        time_step = 0
+
+        while(1):
+
+            time_step += 1
+
             tic = time.time()
-            move, move_probs = player.choose_action(self, temp=temp, return_prob=1)  # 获取落子以及概率
+            move, move_probs, q_vals = player.choose_action(self, temp=temp, return_prob=1, time_step=time_step)
             toc = time.time()
-            print("player %s  chosed move : %s ,prob: %.3f  spend: %.2f seconds" % (self.current_player, move, move_probs[move], (toc-tic)))
-            # 保存数据
+            print("turn %s" % time_step)
+            print('[Move probs]\n', move_probs[:12])
+            print('[Wall probs]\n', move_probs[12:])
+            print("player %s chose move : %s, prob: %.3f, q_vals: %.3f, spend: %.2f seconds" % (self.current_player, move, move_probs[move], q_vals[move], (toc-tic)))
+            print("player 1 remaining stupid move : %s, player 2 remaining stupid move : %s" %(self._player_waste_move[1], self._player_waste_move[2]))
+
             states.append(self.state())
             mcts_probs.append(move_probs)
             current_players.append(self.current_player)
-            # 进行落子
+
             self.step(move)
+
+            print("Player 1 Shortest Path: {}, Player 2 Shortest Path: {}".format(self.dist1, self.dist2))
+
+
+            self.print_board()
             # if is_shown:
             #     self.graphic(self.board, p1, p2)
             end, winner = self.has_a_winner()
+
             if end:
-                # 判断游戏是否结束 ，始终以当前玩家视角保存数据
+
                 winners_z = np.zeros(len(current_players))
                 if winner != -1:
-                    winners_z[np.array(current_players) == winner] = 1.0        # 当前玩家的所有落子的z都设为1
-                    winners_z[np.array(current_players) != winner] = -1.0       # 对手玩家的所有落子的z都设为-1
-                # 重置MCTS节点
+                    winners_z[np.array(current_players) == winner] = 1.0
+                    winners_z[np.array(current_players) != winner] = -1.0
+
                 player.reset_player()
                 if is_shown:
                     if winner != -1:
@@ -608,3 +972,67 @@ class Quoridor(object):
                     else:
                         print("Game end. Tie")
                 return winner, zip(states, mcts_probs, winners_z)
+            else:
+                if time_step > TURN_LIMIT:
+                    print("Reached Game Limit. Draw")
+
+                    winners_z = np.zeros(len(current_players))
+                    winners_z[np.array(current_players) == winner] = 0.0  #
+                    winners_z[np.array(current_players) != winner] = 0.0  #
+
+                    player.reset_player()
+                    return 0, zip(states, mcts_probs, winners_z)
+
+    def start_test_play(self, alpha_player, pure_player, is_shown=0, temp=1e-3, first=1):
+        if first == 1 or first == 3:
+            self.reset(first_player=1, second_player=2)
+        else:
+            self.reset(first_player=2, second_player=1)
+
+        time_step = 0
+
+        while (1):
+
+            time_step += 1
+
+            tic = time.time()
+            if self.current_player == 1:
+                move, move_probs, q_vals = alpha_player.choose_action(self, temp=temp, return_prob=1,
+                                                              time_step=time_step)
+
+                print("turn %s" % time_step)
+                print('[Move probs]\n', move_probs[:12])
+                print('[Wall probs]\n', move_probs[12:])
+                print("alpha_player chose move : %s, prob: %.3f, q_vals: %.3f" % (move, move_probs[move], q_vals[move]))
+            else:
+                move = pure_player.choose_action(self)
+                print("turn %s" % time_step)
+                print("pure_player chose move : {}, prob: {}".format(move[0], move[1]._Q))
+                move = move[0]
+
+            toc = time.time()
+
+            print("spend: %.2f seconds" % (toc - tic))
+
+            self.step(move)
+
+            dist1, dist2 = self.get_shortest_path()
+            print("Player 1 Shortest Path: {} Remaining Walls: {}, Player 2 Shortest Path: {} Remaining Walls: {}".format(dist1, self._player_walls_remaining[1],  dist2, self._player_walls_remaining[2] ))
+
+            self.print_board()
+            # if is_shown:
+            #     self.graphic(self.board, p1, p2)
+            end, winner = self.has_a_winner()
+
+            if end:
+                alpha_player.reset_player()
+                pure_player.reset_player()
+
+                return winner
+            else:
+                if time_step > TURN_LIMIT:
+                    print("Reached Game Limit.")
+
+                    alpha_player.reset_player()
+                    pure_player.reset_player()
+                    return 0
