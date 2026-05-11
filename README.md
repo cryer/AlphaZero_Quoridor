@@ -127,9 +127,6 @@ python train.py
         self.best_win_ratio = 0.0
         self.pure_mcts_playout_num = 1000
 ```
-自己根据实际修改，另外由于暂时代码结构和代码书写未优化，多进程和多线程也还没有实现，所以代码的训练较慢，可以尝试，
-但是最好在我加入多线程多进程之后在开始训练。
-
 
 # MIT License
 
